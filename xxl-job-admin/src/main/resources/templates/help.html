@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<#import "./common/macro.html" as netCommon>
+	<@netCommon.commonStyle />
+	<title>${I18n.admin_name}</title>
+	<style type="text/css">
+		[v-cloak] { display: none; }
+
+		#help-app { font-size: 13px; color: #606266; }
+
+		/* 关键信息卡 */
+		#help-app .doc-facts { margin-bottom: 16px; }
+		#help-app .fact-card { border: none; border-radius: 6px; background: #f7f9fc; }
+		#help-app .fact-card .el-card__body { padding: 14px 18px; }
+		#help-app .fact-label { margin-bottom: 6px; font-size: 12px; color: #909399; }
+		#help-app .fact-value { font-size: 13px; line-height: 1.6; color: #303133; word-break: break-all; }
+
+		/* 段落 */
+		#help-app .doc-section { margin-bottom: 24px; }
+		#help-app .doc-section:last-child { margin-bottom: 0; }
+		#help-app .doc-section-title { position: relative; margin: 0 0 12px; padding-left: 10px;
+			font-size: 15px; font-weight: 600; line-height: 1.4; color: #303133; }
+		#help-app .doc-section-title:before { content: ""; position: absolute; left: 0; top: 3px; bottom: 3px;
+			width: 3px; border-radius: 2px; background: #003AC5; }
+		#help-app .doc-text { margin: 0 0 10px; font-size: 13px; line-height: 1.85; color: #606266; }
+		#help-app .doc-text:last-child { margin-bottom: 0; }
+		#help-app .doc-tip { margin: 0 0 12px; padding: 10px 14px; border-radius: 4px; background: #fff8e6;
+			border-left: 3px solid #E6A23C; font-size: 12px; line-height: 1.85; color: #7a5a1e; }
+		#help-app .doc-tip:last-child { margin-bottom: 0; }
+
+		/* 代码块 */
+		#help-app .doc-code-wrap { position: relative; margin: 0 0 12px; }
+		#help-app .doc-code { margin: 0; padding: 14px 16px; border: 1px solid #e6ebf2; border-left: 3px solid #003AC5;
+			border-radius: 4px; background: #f8fafc; font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+			font-size: 12px; line-height: 1.75; color: #303133; white-space: pre; overflow-x: auto; tab-size: 4; }
+		#help-app .doc-code-wrap .doc-copy { position: absolute; top: 8px; right: 8px; opacity: .45;
+			transition: opacity .2s ease; }
+		#help-app .doc-code-wrap:hover .doc-copy { opacity: 1; }
+		#help-app .doc-inline { padding: 1px 5px; border-radius: 3px; background: #f0f4fa; color: #003AC5;
+			font-family: Menlo, Monaco, Consolas, monospace; font-size: 12px; word-break: break-all; }
+		#help-app .mono { font-family: Menlo, Monaco, Consolas, monospace; }
+
+		/* 步骤 */
+		#help-app .step-item { position: relative; padding-left: 34px; margin-bottom: 14px; }
+		#help-app .step-item:last-child { margin-bottom: 0; }
+		#help-app .step-no { position: absolute; left: 0; top: 1px; width: 22px; height: 22px; line-height: 22px;
+			border-radius: 50%; background: #003AC5; color: #fff; font-size: 12px; text-align: center; }
+		#help-app .step-title { font-size: 13px; font-weight: 600; color: #303133; line-height: 24px; }
+		#help-app .step-desc { font-size: 12px; line-height: 1.8; color: #909399; }
+		#help-app .doc-order { margin: 0; padding-left: 20px; font-size: 12px; line-height: 2.1; color: #606266; }
+
+		/* 接口折叠面板 */
+		#help-app .el-collapse { border-top: none; border-bottom: none; }
+		#help-app .el-collapse-item__header { height: auto; min-height: 46px; line-height: 1.6;
+			padding: 8px 12px; border-bottom: 1px solid #ebeef5; }
+		#help-app .el-collapse-item__wrap { border-bottom: 1px solid #ebeef5; }
+		#help-app .el-collapse-item__content { padding: 16px 12px 4px; }
+		#help-app .api-head { display: flex; align-items: center; flex-wrap: wrap; }
+		#help-app .api-method { flex: none; margin-right: 10px; padding: 0 6px; border-radius: 3px; background: #003AC5;
+			color: #fff; font-size: 11px; line-height: 18px; letter-spacing: .5px; }
+		#help-app .api-path { margin-right: 12px; font-family: Menlo, Monaco, Consolas, monospace;
+			font-size: 13px; color: #303133; }
+		#help-app .api-desc { font-size: 12px; color: #909399; }
+
+		/* 调试器 */
+		#help-app .dbg-card { margin-top: 4px; border: 1px solid #ebeef5; }
+		#help-app .dbg-card > .el-card__header { padding: 10px 16px; background: #f7f9fc; font-weight: 600; }
+		#help-app .dbg-tip { font-size: 12px; font-weight: normal; color: #909399; }
+		#help-app .dbg-form .el-form-item { margin-bottom: 12px; }
+		#help-app .dbg-out .el-input__inner { font-family: Menlo, Monaco, Consolas, monospace; font-size: 12px; }
+		#help-app .dbg-divider { margin: 16px 0 12px; }
+
+		/* 表格 */
+		#help-app .el-table { font-size: 12px; }
+		#help-app .el-table th { background: #f7f9fc; }
+
+		#help-app .doc-links { margin-top: 18px; padding-top: 12px; border-top: 1px dashed #ebeef5;
+			font-size: 12px; color: #909399; }
+
+		@media (max-width: 768px) {
+			#help-app .doc-code { font-size: 11px; }
+			#help-app .api-desc { width: 100%; margin-top: 4px; }
+		}
+	</style>
+</head>
+<body class="hold-transition skin-blue sidebar-mini <#if cookieMap?exists && cookieMap["xxljob_adminlte_settings"]?exists && "off" == cookieMap["xxljob_adminlte_settings"].value >sidebar-collapse</#if> ">
+<div class="wrapper">
+	<!-- header -->
+	<@netCommon.commonHeader />
+	<!-- left -->
+	<@netCommon.commonLeft "help" />
+
+	<!-- Content Wrapper. Contains page content -->
+	<div class="content-wrapper">
+		<!-- Content Header (Page header) -->
+		<section class="content-header">
+			<h1>${I18n.job_help}</h1>
+		</section>
+
+		<!-- Main content -->
+		<section class="content">
+			<div id="help-app" v-cloak>
+
+				<#-- 关键信息 -->
+				<el-row :gutter="16" class="doc-facts">
+					<el-col :xs="24" :sm="8">
+						<el-card shadow="hover" class="fact-card">
+							<div class="fact-label">${I18n.job_help_doc_base_url}</div>
+							<div class="fact-value mono">
+								{{ openapiBase }}
+								<el-button type="text" size="mini" icon="el-icon-document-copy" @click="copy(openapiBase)">${I18n.job_help_doc_copy}</el-button>
+							</div>
+						</el-card>
+					</el-col>
+					<el-col :xs="24" :sm="8">
+						<el-card shadow="hover" class="fact-card">
+							<div class="fact-label">${I18n.job_help_doc_auth_mode}</div>
+							<div class="fact-value">{{ i18n.authMode }}</div>
+						</el-card>
+					</el-col>
+					<el-col :xs="24" :sm="8">
+						<el-card shadow="hover" class="fact-card">
+							<div class="fact-label">${I18n.job_help_doc_protocol}</div>
+							<div class="fact-value mono">{{ i18n.protocol }}</div>
+						</el-card>
+					</el-col>
+				</el-row>
+
+				<el-tabs v-model="activeTab" type="border-card">
+
+					<#-- 1. 概览 -->
+					<el-tab-pane name="overview" label="${I18n.job_help_doc_tab_overview}">
+						<div class="doc-section">
+							<p class="doc-text">${I18n.job_help_doc_intro}</p>
+						</div>
+
+						<div class="doc-section">
+							<div class="doc-section-title">${I18n.job_help_doc_quick_start}</div>
+							<div class="step-item">
+								<span class="step-no">1</span>
+								<div class="step-title">${I18n.job_help_doc_step1}</div>
+								<div class="step-desc">${I18n.job_help_doc_step1_desc}</div>
+							</div>
+							<div class="step-item">
+								<span class="step-no">2</span>
+								<div class="step-title">${I18n.job_help_doc_step2}</div>
+								<div class="step-desc">${I18n.job_help_doc_step2_desc}</div>
+							</div>
+							<div class="step-item">
+								<span class="step-no">3</span>
+								<div class="step-title">${I18n.job_help_doc_step3}</div>
+								<div class="step-desc">${I18n.job_help_doc_step3_desc}</div>
+							</div>
+						</div>
+
+						<div class="doc-section">
+							<div class="doc-tip">
+								<b>${I18n.job_help_doc_perm}</b><br>{{ i18n.permDesc }}
+							</div>
+						</div>
+
+						<div class="doc-section">
+							<div class="doc-section-title">${I18n.job_help_doc_endpoints}</div>
+							<p class="doc-text">{{ i18n.allPost }}</p>
+							<el-table :data="apis" size="mini" border style="width:100%">
+								<el-table-column label="${I18n.job_help_doc_col_method}" width="80" align="center">
+									<template slot-scope="scope">
+										<span class="api-method">POST</span>
+									</template>
+								</el-table-column>
+								<el-table-column label="${I18n.job_help_doc_col_endpoint}" width="220">
+									<template slot-scope="scope">
+										<span class="mono">{{ scope.row.path }}</span>
+									</template>
+								</el-table-column>
+								<el-table-column prop="desc" label="${I18n.job_help_doc_col_desc}"></el-table-column>
+								<el-table-column prop="content" label="${I18n.job_help_doc_col_content}" width="180"></el-table-column>
+							</el-table>
+						</div>
+
+						<div class="doc-links">
+							<i class="fa fa-link"></i>&nbsp;
+							<a target="_blank" href="https://www.xuxueli.com/xxl-job/">${I18n.job_help_document}</a>
+							<el-divider direction="vertical"></el-divider>
+							<span>${I18n.admin_name_full}</span>
+							<el-divider direction="vertical"></el-divider>
+							<a target="_blank" href="https://gitee.com/chongkelai/xxl-job-pro">Gitee</a>
+						</div>
+					</el-tab-pane>
+
+					<#-- 2. 鉴权与签名 -->
+					<el-tab-pane name="auth" label="${I18n.job_help_doc_tab_auth}">
+						<div class="doc-section">
+							<div class="doc-section-title">${I18n.job_help_doc_headers}</div>
+							<el-table :data="headers" size="mini" border style="width:100%">
+								<el-table-column label="${I18n.job_help_doc_col_header}" width="220">
+									<template slot-scope="scope">
+										<span class="doc-inline">{{ scope.row.name }}</span>
+									</template>
+								</el-table-column>
+								<el-table-column label="${I18n.job_help_doc_col_required}" width="80" align="center">
+									<template slot-scope="scope">
+										<el-tag v-if="scope.row.required" type="success" size="mini">${I18n.job_help_doc_col_required}</el-tag>
+										<el-tag v-else type="info" size="mini">-</el-tag>
+									</template>
+								</el-table-column>
+								<el-table-column prop="desc" label="${I18n.job_help_doc_col_desc}"></el-table-column>
+							</el-table>
+						</div>
+
+						<div class="doc-section">
+							<div class="doc-section-title">${I18n.job_help_doc_str2sign}</div>
+							<div class="doc-code-wrap">
+								<pre class="doc-code">{{ signDemo.stringToSign }}</pre>
+								<el-button class="doc-copy" size="mini" icon="el-icon-document-copy" @click="copy(signDemo.stringToSign)"></el-button>
+							</div>
+							<p class="doc-text">{{ i18n.str2signDesc }}</p>
+						</div>
+
+						<div class="doc-section">
+							<div class="doc-section-title">${I18n.job_help_doc_sign_calc}</div>
+							<div class="doc-code-wrap">
+								<pre class="doc-code">{{ signDemo.sign }}</pre>
+								<el-button class="doc-copy" size="mini" icon="el-icon-document-copy" @click="copy(signDemo.sign)"></el-button>
+							</div>
+							<p class="doc-text">${I18n.job_help_doc_sign_calc_desc}</p>
+						</div>
+
+						<div class="doc-section">
+							<div class="doc-section-title">${I18n.job_help_doc_verify_order}</div>
+							<ol class="doc-order">
+								<li v-for="item in verifySteps" :key="item">{{ item }}</li>
+							</ol>
+							<p class="doc-text">{{ i18n.verifyFail }}</p>
+						</div>
+
+						<div class="doc-section">
+							<el-card shadow="never" class="dbg-card">
+								<div slot="header">
+									<i class="el-icon-magic-stick"></i>&nbsp;${I18n.job_help_doc_debugger}
+									<span class="dbg-tip">&nbsp;&nbsp;{{ i18n.debuggerTip }}</span>
+								</div>
+								<el-row :gutter="20">
+									<el-col :xs="24" :md="11">
+										<el-form label-width="96px" size="mini" class="dbg-form">
+											<el-form-item label="${I18n.apiclient_app_key}">
+												<el-input v-model="dbg.appKey" placeholder="your_app_key" clearable></el-input>
+											</el-form-item>
+											<el-form-item label="${I18n.apiclient_app_secret}">
+												<el-input v-model="dbg.appSecret" placeholder="your_app_secret" show-password></el-input>
+											</el-form-item>
+											<el-form-item label="${I18n.job_help_doc_dbg_path}">
+												<el-select v-model="dbg.path" style="width:100%" @change="onPathChange">
+													<el-option v-for="item in apis" :key="item.path" :label="item.path" :value="item.path"></el-option>
+												</el-select>
+											</el-form-item>
+											<el-form-item v-if="dbgQueryKey" label="${I18n.job_help_doc_dbg_query}">
+												<el-input v-model="dbg.queryId" :placeholder="dbgQueryKey + '=1'"></el-input>
+											</el-form-item>
+											<el-form-item label="${I18n.job_help_doc_dbg_body}">
+												<el-input type="textarea" :rows="6" v-model="dbg.body"
+														  :disabled="!dbgHasBody" :placeholder="dbgHasBody ? '' : i18n.emptyBody"></el-input>
+											</el-form-item>
+											<el-form-item label-width="96px">
+												<el-button type="primary" size="mini" icon="el-icon-key" @click="runSign">${I18n.job_help_doc_dbg_run}</el-button>
+											</el-form-item>
+										</el-form>
+									</el-col>
+									<el-col :xs="24" :md="13">
+										<el-form label-width="96px" size="mini" class="dbg-form dbg-out">
+											<el-form-item label="${I18n.job_help_doc_dbg_url}">
+												<el-input :value="dbgResult.url || '-'" readonly></el-input>
+											</el-form-item>
+											<el-form-item label="${I18n.job_help_doc_dbg_ts}">
+												<el-input :value="dbgResult.timestamp || '-'" readonly></el-input>
+											</el-form-item>
+											<el-form-item label="${I18n.job_help_doc_dbg_nonce}">
+												<el-input :value="dbgResult.nonce || '-'" readonly></el-input>
+											</el-form-item>
+											<el-form-item label="${I18n.job_help_doc_dbg_sign}">
+												<el-input :value="dbgResult.sign || '-'" readonly></el-input>
+											</el-form-item>
+										</el-form>
+										<el-divider class="dbg-divider"><span style="font-size:12px;">${I18n.job_help_doc_dbg_str2sign}</span></el-divider>
+										<div class="doc-code-wrap">
+											<pre class="doc-code">{{ dbgResult.stringToSign || '-' }}</pre>
+											<el-button class="doc-copy" size="mini" icon="el-icon-document-copy" @click="copy(dbgResult.stringToSign)"></el-button>
+										</div>
+										<el-divider class="dbg-divider"><span style="font-size:12px;">${I18n.job_help_doc_dbg_curl}</span></el-divider>
+										<div class="doc-code-wrap">
+											<pre class="doc-code">{{ dbgResult.curl || '-' }}</pre>
+											<el-button class="doc-copy" size="mini" icon="el-icon-document-copy" @click="copy(dbgResult.curl)"></el-button>
+										</div>
+									</el-col>
+								</el-row>
+							</el-card>
+						</div>
+					</el-tab-pane>
+
+					<#-- 3. 接口列表 -->
+					<el-tab-pane name="api" label="${I18n.job_help_doc_tab_api}">
+						<el-collapse v-model="activeApis">
+							<el-collapse-item v-for="item in apis" :key="item.path" :name="item.path">
+								<template slot="title">
+									<div class="api-head">
+										<span class="api-method">POST</span>
+										<span class="api-path">{{ item.path }}</span>
+										<span class="api-desc">{{ item.desc }}</span>
+									</div>
+								</template>
+
+								<div v-if="item.note" class="doc-tip">{{ item.note }}</div>
+
+								<div v-if="item.params.length" class="doc-section">
+									<div class="doc-section-title">${I18n.job_help_doc_req_params}</div>
+									<el-table :data="item.params" size="mini" border style="width:100%">
+										<el-table-column label="${I18n.job_help_doc_col_param}" width="170">
+											<template slot-scope="scope">
+												<span class="doc-inline">{{ scope.row.name }}</span>
+											</template>
+										</el-table-column>
+										<el-table-column prop="type" label="${I18n.job_help_doc_col_type}" width="90"></el-table-column>
+										<el-table-column label="${I18n.job_help_doc_col_required}" width="80" align="center">
+											<template slot-scope="scope">
+												<el-tag v-if="scope.row.required" type="success" size="mini">${I18n.job_help_doc_col_required}</el-tag>
+												<el-tag v-else type="info" size="mini">-</el-tag>
+											</template>
+										</el-table-column>
+										<el-table-column prop="desc" label="${I18n.job_help_doc_col_desc}"></el-table-column>
+									</el-table>
+								</div>
+
+								<div class="doc-section">
+									<div class="doc-section-title">${I18n.job_help_doc_req_example}</div>
+									<div class="doc-code-wrap">
+										<pre class="doc-code">{{ item.request }}</pre>
+										<el-button class="doc-copy" size="mini" icon="el-icon-document-copy" @click="copy(item.request)"></el-button>
+									</div>
+								</div>
+
+								<div class="doc-section">
+									<div class="doc-section-title">${I18n.job_help_doc_resp_example}</div>
+									<div class="doc-code-wrap">
+										<pre class="doc-code">{{ item.response }}</pre>
+										<el-button class="doc-copy" size="mini" icon="el-icon-document-copy" @click="copy(item.response)"></el-button>
+									</div>
+								</div>
+							</el-collapse-item>
+						</el-collapse>
+					</el-tab-pane>
+
+					<#-- 4. 任务字段 -->
+					<el-tab-pane name="field" label="${I18n.job_help_doc_tab_field}">
+						<div class="doc-section">
+							<div class="doc-section-title">${I18n.job_help_doc_field_required}</div>
+							<el-table :data="requiredFields" size="mini" border style="width:100%">
+								<el-table-column label="${I18n.job_help_doc_col_field}" width="200">
+									<template slot-scope="scope">
+										<span class="doc-inline">{{ scope.row.name }}</span>
+									</template>
+								</el-table-column>
+								<el-table-column prop="type" label="${I18n.job_help_doc_col_type}" width="90"></el-table-column>
+								<el-table-column prop="desc" label="${I18n.job_help_doc_col_desc}"></el-table-column>
+							</el-table>
+						</div>
+
+						<div class="doc-section">
+							<div class="doc-section-title">${I18n.job_help_doc_field_optional}</div>
+							<el-table :data="optionalFields" size="mini" border style="width:100%">
+								<el-table-column label="${I18n.job_help_doc_col_field}" width="200">
+									<template slot-scope="scope">
+										<span class="doc-inline">{{ scope.row.name }}</span>
+									</template>
+								</el-table-column>
+								<el-table-column prop="type" label="${I18n.job_help_doc_col_type}" width="90"></el-table-column>
+								<el-table-column prop="desc" label="${I18n.job_help_doc_col_desc}"></el-table-column>
+							</el-table>
+						</div>
+
+						<div class="doc-section">
+							<div class="doc-section-title">${I18n.job_help_doc_field_enum}</div>
+							<el-table :data="enumRows" size="mini" border style="width:100%">
+								<el-table-column prop="field" label="${I18n.job_help_doc_col_field}" width="220">
+									<template slot-scope="scope">
+										<span class="doc-inline">{{ scope.row.field }}</span>
+									</template>
+								</el-table-column>
+								<el-table-column label="${I18n.job_help_doc_field_enum}">
+									<template slot-scope="scope">
+										<el-tag v-for="val in scope.row.values" :key="val" type="info" size="mini"
+												style="margin:2px 6px 2px 0;">{{ val }}</el-tag>
+									</template>
+								</el-table-column>
+							</el-table>
+							<div class="doc-tip" style="margin-top:12px;">${I18n.job_help_doc_field_tip}</div>
+						</div>
+					</el-tab-pane>
+
+					<#-- 5. Webhook -->
+					<el-tab-pane name="webhook" label="${I18n.job_help_doc_tab_webhook}">
+						<div class="doc-section">
+							<p class="doc-text">{{ i18n.webhookDesc }}</p>
+						</div>
+
+						<div class="doc-section">
+							<div class="doc-section-title">${I18n.job_help_doc_webhook_payload}</div>
+							<div class="doc-code-wrap">
+								<pre class="doc-code">{{ webhook.payload }}</pre>
+								<el-button class="doc-copy" size="mini" icon="el-icon-document-copy" @click="copy(webhook.payload)"></el-button>
+							</div>
+							<p class="doc-text">{{ i18n.webhookRetryDesc }}</p>
+						</div>
+
+						<div class="doc-section">
+							<div class="doc-section-title">${I18n.job_help_doc_webhook_sign}</div>
+							<div class="doc-code-wrap">
+								<pre class="doc-code">Xxl-Job-Callback-Sign: lowercaseHex( HmacSHA256( appSecret, rawBody ) )</pre>
+								<el-button class="doc-copy" size="mini" icon="el-icon-document-copy" @click="copy('Xxl-Job-Callback-Sign: lowercaseHex( HmacSHA256( appSecret, rawBody ) )')"></el-button>
+							</div>
+							<p class="doc-text">{{ i18n.webhookSignDesc }}</p>
+						</div>
+
+						<div class="doc-section">
+							<div class="doc-section-title">${I18n.job_help_doc_webhook_retry}</div>
+							<div class="doc-code-wrap">
+								<pre class="doc-code">{{ webhook.verify }}</pre>
+								<el-button class="doc-copy" size="mini" icon="el-icon-document-copy" @click="copy(webhook.verify)"></el-button>
+							</div>
+						</div>
+					</el-tab-pane>
+
+					<#-- 6. 代码示例 -->
+					<el-tab-pane name="example" label="${I18n.job_help_doc_tab_example}">
+						<el-tabs v-model="exampleTab" type="card">
+							<el-tab-pane name="java" label="${I18n.job_help_doc_example_java}">
+								<div class="doc-section">
+									<p class="doc-text">${I18n.job_help_doc_example_java_desc}</p>
+									<div class="doc-code-wrap">
+										<pre class="doc-code">{{ examples.java }}</pre>
+										<el-button class="doc-copy" size="mini" icon="el-icon-document-copy" @click="copy(examples.java)"></el-button>
+									</div>
+								</div>
+							</el-tab-pane>
+							<el-tab-pane name="python" label="${I18n.job_help_doc_example_python}">
+								<div class="doc-section">
+									<div class="doc-code-wrap">
+										<pre class="doc-code">{{ examples.python }}</pre>
+										<el-button class="doc-copy" size="mini" icon="el-icon-document-copy" @click="copy(examples.python)"></el-button>
+									</div>
+								</div>
+							</el-tab-pane>
+						</el-tabs>
+					</el-tab-pane>
+
+					<#-- 7. 错误与限制 -->
+					<el-tab-pane name="error" label="${I18n.job_help_doc_tab_error}">
+						<div class="doc-section">
+							<el-table :data="errors" size="mini" border style="width:100%">
+								<el-table-column prop="scene" label="${I18n.job_help_doc_col_scene}"></el-table-column>
+								<el-table-column prop="behavior" label="${I18n.job_help_doc_col_behavior}" width="320"></el-table-column>
+							</el-table>
+						</div>
+
+						<div class="doc-section">
+							<div class="doc-tip">{{ i18n.errNonce }}</div>
+							<div class="doc-tip">{{ i18n.errSecret }}</div>
+						</div>
+					</el-tab-pane>
+				</el-tabs>
+
+			</div>
+		</section>
+		<!-- /.content -->
+	</div>
+	<!-- /.content-wrapper -->
+
+	<!-- footer -->
+	<@netCommon.commonFooter />
+</div>
+<@netCommon.commonScript />
+<script>
+	(function () {
+		'use strict';
+
+		/* ==================== HMAC-SHA256（浏览器端，与 OpenApiSignUtil 保持一致） ==================== */
+		var HmacSign = (function () {
+			var K = [
+				0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+				0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+				0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+				0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+				0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+				0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+				0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+				0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+			];
+
+			function rotr(x, n) {
+				return (x >>> n) | (x << (32 - n));
+			}
+
+			function utf8Bytes(str) {
+				var out = [];
+				for (var i = 0; i < str.length; i++) {
+					var c = str.charCodeAt(i);
+					if (c < 0x80) {
+						out.push(c);
+					} else if (c < 0x800) {
+						out.push(0xc0 | (c >> 6), 0x80 | (c & 0x3f));
+					} else if (c >= 0xd800 && c <= 0xdbff && i + 1 < str.length) {
+						var c2 = str.charCodeAt(++i);
+						var cp = 0x10000 + ((c - 0xd800) << 10) + (c2 - 0xdc00);
+						out.push(0xf0 | (cp >> 18), 0x80 | ((cp >> 12) & 0x3f), 0x80 | ((cp >> 6) & 0x3f), 0x80 | (cp & 0x3f));
+					} else {
+						out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 0x3f), 0x80 | (c & 0x3f));
+					}
+				}
+				return out;
+			}
+
+			function sha256(bytes) {
+				var H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+				var len = bytes.length;
+				var total = Math.ceil((len + 9) / 64) * 64;
+				var buf = new Array(total);
+				for (var i = 0; i < len; i++) {
+					buf[i] = bytes[i];
+				}
+				buf[len] = 0x80;
+				for (i = len + 1; i < total; i++) {
+					buf[i] = 0;
+				}
+				// 64 位大端字节长度
+				var bitsHi = Math.floor(len / 536870912);
+				var bitsLo = (len % 536870912) * 8;
+				buf[total - 8] = (bitsHi >>> 24) & 0xff;
+				buf[total - 7] = (bitsHi >>> 16) & 0xff;
+				buf[total - 6] = (bitsHi >>> 8) & 0xff;
+				buf[total - 5] = bitsHi & 0xff;
+				buf[total - 4] = (bitsLo >>> 24) & 0xff;
+				buf[total - 3] = (bitsLo >>> 16) & 0xff;
+				buf[total - 2] = (bitsLo >>> 8) & 0xff;
+				buf[total - 1] = bitsLo & 0xff;
+
+				var w = new Array(64);
+				for (var off = 0; off < total; off += 64) {
+					var t;
+					for (t = 0; t < 16; t++) {
+						w[t] = (buf[off + t * 4] << 24) | (buf[off + t * 4 + 1] << 16) | (buf[off + t * 4 + 2] << 8) | buf[off + t * 4 + 3];
+					}
+					for (t = 16; t < 64; t++) {
+						var w15 = w[t - 15], w2 = w[t - 2];
+						var s0 = rotr(w15, 7) ^ rotr(w15, 18) ^ (w15 >>> 3);
+						var s1 = rotr(w2, 17) ^ rotr(w2, 19) ^ (w2 >>> 10);
+						w[t] = (w[t - 16] + s0 + w[t - 7] + s1) | 0;
+					}
+					var a = H[0], b = H[1], c = H[2], d = H[3], e = H[4], f = H[5], g = H[6], h = H[7];
+					for (t = 0; t < 64; t++) {
+						var S1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
+						var ch = (e & f) ^ (~e & g);
+						var t1 = (h + S1 + ch + K[t] + w[t]) | 0;
+						var S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
+						var maj = (a & b) ^ (a & c) ^ (b & c);
+						var t2 = (S0 + maj) | 0;
+						h = g;
+						g = f;
+						f = e;
+						e = (d + t1) | 0;
+						d = c;
+						c = b;
+						b = a;
+						a = (t1 + t2) | 0;
+					}
+					H[0] = (H[0] + a) | 0;
+					H[1] = (H[1] + b) | 0;
+					H[2] = (H[2] + c) | 0;
+					H[3] = (H[3] + d) | 0;
+					H[4] = (H[4] + e) | 0;
+					H[5] = (H[5] + f) | 0;
+					H[6] = (H[6] + g) | 0;
+					H[7] = (H[7] + h) | 0;
+				}
+
+				var out = [];
+				for (i = 0; i < 8; i++) {
+					out.push((H[i] >>> 24) & 0xff, (H[i] >>> 16) & 0xff, (H[i] >>> 8) & 0xff, H[i] & 0xff);
+				}
+				return out;
+			}
+
+			function hex(bytes) {
+				var out = '';
+				for (var i = 0; i < bytes.length; i++) {
+					out += ('0' + bytes[i].toString(16)).slice(-2);
+				}
+				return out;
+			}
+
+			function hmacSha256Hex(secret, data) {
+				var key = utf8Bytes(secret);
+				if (key.length > 64) {
+					key = sha256(key);
+				}
+				var ipad = [], opad = [];
+				for (var i = 0; i < 64; i++) {
+					var k = i < key.length ? key[i] : 0;
+					ipad.push(k ^ 0x36);
+					opad.push(k ^ 0x5c);
+				}
+				var inner = sha256(ipad.concat(utf8Bytes(data)));
+				return hex(sha256(opad.concat(inner)));
+			}
+
+			return {hmacSha256Hex: hmacSha256Hex};
+		})();
+
+		/* ==================== 示例文本 ==================== */
+		var API_PREFIX = '/openapi/v1';
+
+		var BODY_ADD = '{\n' +
+			'  "jobGroup": 1,\n' +
+			'  "jobDesc": "openapi demo job",\n' +
+			'  "author": "openapi",\n' +
+			'  "alarmEmail": "",\n' +
+			'  "scheduleType": "CRON",\n' +
+			'  "scheduleConf": "0 0/5 * * * ?",\n' +
+			'  "misfireStrategy": "DO_NOTHING",\n' +
+			'  "executorRouteStrategy": "FIRST",\n' +
+			'  "executorHandler": "demoJobHandler",\n' +
+			'  "executorParam": "",\n' +
+			'  "executorBlockStrategy": "SERIAL_EXECUTION",\n' +
+			'  "executorTimeout": 0,\n' +
+			'  "executorFailRetryCount": 0,\n' +
+			'  "glueType": "BEAN"\n' +
+			'}';
+
+		var BODY_UPDATE = '{\n' +
+			'  "id": 12,\n' +
+			'  "jobGroup": 1,\n' +
+			'  "jobDesc": "openapi demo job",\n' +
+			'  "author": "openapi",\n' +
+			'  "scheduleType": "CRON",\n' +
+			'  "scheduleConf": "0 0/10 * * * ?",\n' +
+			'  "glueType": "BEAN",\n' +
+			'  "executorHandler": "demoJobHandler"\n' +
+			'}';
+
+		var BODY_TRIGGER = '{\n' +
+			'  "jobId": 5,\n' +
+			'  "executorParam": "hello from openapi",\n' +
+			'  "addressList": null,\n' +
+			'  "webhookUrl": null\n' +
+			'}';
+
+		var RESP_ADD = '{\n' +
+			'  "code": 200,\n' +
+			'  "msg": "success",\n' +
+			'  "content": "12"\n' +
+			'}';
+
+		var RESP_NULL = '{\n' +
+			'  "code": 200,\n' +
+			'  "msg": "success",\n' +
+			'  "content": null\n' +
+			'}';
+
+		var RESP_TRIGGER = '{\n' +
+			'  "code": 200,\n' +
+			'  "msg": "success",\n' +
+			'  "content": "1024"\n' +
+			'}';
+
+		var RESP_GET = '{\n' +
+			'  "code": 200,\n' +
+			'  "msg": "success",\n' +
+			'  "content": {\n' +
+			'    "id": 12,\n' +
+			'    "jobGroup": 1,\n' +
+			'    "jobDesc": "openapi demo job",\n' +
+			'    "author": "openapi",\n' +
+			'    "scheduleType": "CRON",\n' +
+			'    "scheduleConf": "0 0/5 * * * ?",\n' +
+			'    "misfireStrategy": "DO_NOTHING",\n' +
+			'    "executorRouteStrategy": "FIRST",\n' +
+			'    "executorHandler": "demoJobHandler",\n' +
+			'    "glueType": "BEAN",\n' +
+			'    "triggerStatus": 1,\n' +
+			'    "triggerLastTime": 1730000000000,\n' +
+			'    "triggerNextTime": 1730000300000\n' +
+			'  }\n' +
+			'}';
+
+		var RESP_RESULT = '{\n' +
+			'  "code": 200,\n' +
+			'  "msg": "success",\n' +
+			'  "content": {\n' +
+			'    "logId": 1024,\n' +
+			'    "jobId": 5,\n' +
+			'    "triggerCode": 200,\n' +
+			'    "triggerMsg": "trigger success",\n' +
+			'    "handleCode": 200,\n' +
+			'    "handleMsg": "handle success"\n' +
+			'  }\n' +
+			'}';
+
+		var WEBHOOK_PAYLOAD = '{\n' +
+			'  "logId": 1024,\n' +
+			'  "jobId": 5,\n' +
+			'  "jobGroup": 1,\n' +
+			'  "executorAddress": "192.168.1.10:9999",\n' +
+			'  "triggerCode": 200,\n' +
+			'  "handleCode": 200,\n' +
+			'  "handleMsg": "handle success",\n' +
+			'  "finishTime": 1730000000000\n' +
+			'}';
+
+		var WEBHOOK_VERIFY = 'String got = request.getHeader("Xxl-Job-Callback-Sign");\n' +
+			'String rawBody = readRawBody(request);            // 与收到的原始字节一致\n' +
+			'String expect = lowercaseHex(hmacSha256(appSecret, rawBody));\n' +
+			'\n' +
+			'if (got == null || !MessageDigest.isEqual(expect.getBytes(StandardCharsets.UTF_8),\n' +
+			'        got.getBytes(StandardCharsets.UTF_8))) {\n' +
+			'    response.setStatus(401);                      // 无签名或签名不符，拒绝处理\n' +
+			'    return;\n' +
+			'}\n' +
+			'// 校验通过：解析 JSON，按 logId 幂等处理';
+
+		/* ==================== Vue 应用 ==================== */
+		new Vue({
+			el: '#help-app',
+			data: {
+				activeTab: 'overview',
+				exampleTab: 'java',
+				activeApis: ['/job/add'],
+				siteBase: '',
+				openapiBase: '',
+				apis: [],
+				headers: [],
+				requiredFields: [],
+				optionalFields: [],
+				enumRows: [],
+				errors: [],
+				verifySteps: [],
+				examples: {java: '', python: ''},
+				webhook: {payload: WEBHOOK_PAYLOAD, verify: WEBHOOK_VERIFY},
+				signDemo: {stringToSign: '', sign: ''},
+				i18n: {
+					authMode: '',
+					protocol: '',
+					permDesc: '',
+					allPost: '',
+					str2signDesc: '',
+					verifyFail: '',
+					debuggerTip: '',
+					webhookDesc: '',
+					webhookSignDesc: '',
+					webhookRetryDesc: '',
+					errNonce: '',
+					errSecret: '',
+					emptyBody: ''
+				},
+				dbg: {appKey: '', appSecret: '', path: '/job/trigger', queryId: '5', body: BODY_TRIGGER},
+				dbgResult: {url: '', timestamp: '', nonce: '', sign: '', stringToSign: '', curl: ''}
+			},
+			computed: {
+				currentApi: function () {
+					for (var i = 0; i < this.apis.length; i++) {
+						if (this.apis[i].path === this.dbg.path) {
+							return this.apis[i];
+						}
+					}
+					return null;
+				},
+				dbgQueryKey: function () {
+					return this.currentApi ? this.currentApi.queryKey : '';
+				},
+				dbgHasBody: function () {
+					return !!(this.currentApi && this.currentApi.body);
+				}
+			},
+			created: function () {
+				var origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
+				this.siteBase = origin + (typeof base_url === 'string' ? base_url : '');
+				this.openapiBase = this.siteBase + API_PREFIX;
+
+				this.bindI18n();
+				this.buildDocs();
+			},
+			methods: {
+
+				/* ---------------- i18n 绑定 ---------------- */
+				bindI18n: function () {
+					this.i18n.authMode = I18n.job_help_doc_auth_mode_value;
+					this.i18n.protocol = I18n.job_help_doc_protocol_value;
+					this.i18n.permDesc = I18n.job_help_doc_perm_desc;
+					this.i18n.allPost = I18n.job_help_doc_all_post;
+					this.i18n.str2signDesc = I18n.job_help_doc_str2sign_desc;
+					this.i18n.verifyFail = I18n.job_help_doc_verify_fail;
+					this.i18n.debuggerTip = I18n.job_help_doc_debugger_tip;
+					this.i18n.webhookDesc = I18n.job_help_doc_webhook_desc;
+					this.i18n.webhookSignDesc = I18n.job_help_doc_webhook_sign_desc;
+					this.i18n.webhookRetryDesc = I18n.job_help_doc_webhook_retry_desc;
+					this.i18n.errNonce = I18n.job_help_doc_err_nonce;
+					this.i18n.errSecret = I18n.job_help_doc_err_secret;
+					this.i18n.emptyBody = I18n.job_help_doc_empty_body;
+
+					this.signDemo.stringToSign = 'stringToSign = appKey + "\\n" + timestamp + "\\n" + nonce + "\\n" + rawBody';
+					this.signDemo.sign = 'sign = lowercaseHex( HmacSHA256( key = appSecret, data = stringToSign ) )';
+				},
+
+				/* ---------------- 文档数据 ---------------- */
+				buildDocs: function () {
+					var base = this.openapiBase;
+					var emptyNote = I18n.job_help_doc_empty_body;
+					var header = 'POST ';
+					var contentType = '\nContent-Type: application/json;charset=UTF-8\n\n';
+
+					var that = this;
+
+					this.apis = [
+						{
+							path: '/job/add',
+							desc: I18n.job_help_doc_api_add,
+							content: I18n.job_help_doc_content_jobid,
+							note: I18n.job_help_doc_field_tip,
+							queryKey: '',
+							params: [],
+							body: BODY_ADD,
+							request: header + base + '/job/add' + contentType + BODY_ADD,
+							response: RESP_ADD
+						},
+						{
+							path: '/job/update',
+							desc: I18n.job_help_doc_api_update,
+							content: I18n.job_help_doc_content_null,
+							note: I18n.job_help_doc_field_tip,
+							queryKey: '',
+							params: [],
+							body: BODY_UPDATE,
+							request: header + base + '/job/update' + contentType + BODY_UPDATE,
+							response: RESP_NULL
+						},
+						{
+							path: '/job/start',
+							desc: I18n.job_help_doc_api_start,
+							content: I18n.job_help_doc_content_null,
+							note: '',
+							queryKey: 'id',
+							params: [{name: 'id', type: 'int', required: true, desc: I18n.job_help_doc_param_id}],
+							body: '',
+							request: header + base + '/job/start?id=12\n\n' + emptyNote,
+							response: RESP_NULL
+						},
+						{
+							path: '/job/stop',
+							desc: I18n.job_help_doc_api_stop,
+							content: I18n.job_help_doc_content_null,
+							note: '',
+							queryKey: 'id',
+							params: [{name: 'id', type: 'int', required: true, desc: I18n.job_help_doc_param_id}],
+							body: '',
+							request: header + base + '/job/stop?id=12\n\n' + emptyNote,
+							response: RESP_NULL
+						},
+						{
+							path: '/job/remove',
+							desc: I18n.job_help_doc_api_remove,
+							content: I18n.job_help_doc_content_null,
+							note: '',
+							queryKey: 'id',
+							params: [{name: 'id', type: 'int', required: true, desc: I18n.job_help_doc_param_id}],
+							body: '',
+							request: header + base + '/job/remove?id=12\n\n' + emptyNote,
+							response: RESP_NULL
+						},
+						{
+							path: '/job/get',
+							desc: I18n.job_help_doc_api_get,
+							content: I18n.job_help_doc_content_job,
+							note: '',
+							queryKey: 'id',
+							params: [{name: 'id', type: 'int', required: true, desc: I18n.job_help_doc_param_id}],
+							body: '',
+							request: header + base + '/job/get?id=12\n\n' + emptyNote,
+							response: RESP_GET
+						},
+						{
+							path: '/job/trigger',
+							desc: I18n.job_help_doc_api_trigger,
+							content: I18n.job_help_doc_content_logid,
+							note: '',
+							queryKey: '',
+							params: [
+								{name: 'jobId', type: 'int', required: true, desc: I18n.job_help_doc_param_id},
+								{name: 'executorParam', type: 'string', required: false, desc: I18n.job_help_doc_param_executorparam},
+								{name: 'addressList', type: 'string', required: false, desc: I18n.job_help_doc_param_addresslist},
+								{name: 'webhookUrl', type: 'string', required: false, desc: I18n.job_help_doc_param_webhookurl}
+							],
+							body: BODY_TRIGGER,
+							request: header + base + '/job/trigger' + contentType + BODY_TRIGGER,
+							response: RESP_TRIGGER
+						},
+						{
+							path: '/joblog/result',
+							desc: I18n.job_help_doc_api_result,
+							content: I18n.job_help_doc_content_result,
+							note: '',
+							queryKey: 'logId',
+							params: [{name: 'logId', type: 'long', required: true, desc: I18n.job_help_doc_param_logid}],
+							body: '',
+							request: header + base + '/joblog/result?logId=1024\n\n' + emptyNote,
+							response: RESP_RESULT
+						}
+					];
+
+					this.headers = [
+						{name: 'XXL-JOB-APP-KEY', required: true, desc: I18n.job_help_doc_header_appkey},
+						{name: 'XXL-JOB-TIMESTAMP', required: true, desc: I18n.job_help_doc_header_ts},
+						{name: 'XXL-JOB-NONCE', required: true, desc: I18n.job_help_doc_header_nonce},
+						{name: 'XXL-JOB-SIGN', required: true, desc: I18n.job_help_doc_header_sign}
+					];
+
+					this.verifySteps = [
+						I18n.job_help_doc_verify_1,
+						I18n.job_help_doc_verify_2,
+						I18n.job_help_doc_verify_3,
+						I18n.job_help_doc_verify_4,
+						I18n.job_help_doc_verify_5,
+						I18n.job_help_doc_verify_6
+					];
+
+					this.requiredFields = [
+						{name: 'jobGroup', type: 'int', desc: I18n.job_help_doc_f_jobgroup},
+						{name: 'jobDesc', type: 'string', desc: I18n.job_help_doc_f_jobdesc},
+						{name: 'author', type: 'string', desc: I18n.job_help_doc_f_author},
+						{name: 'scheduleType', type: 'string', desc: I18n.job_help_doc_f_scheduletype},
+						{name: 'scheduleConf', type: 'string', desc: I18n.job_help_doc_f_scheduleconf},
+						{name: 'glueType', type: 'string', desc: I18n.job_help_doc_f_gluetype},
+						{name: 'executorHandler', type: 'string', desc: I18n.job_help_doc_f_handler}
+					];
+
+					this.optionalFields = [
+						{name: 'alarmEmail', type: 'string', desc: I18n.job_help_doc_f_alarm},
+						{name: 'misfireStrategy', type: 'string', desc: I18n.job_help_doc_f_misfire},
+						{name: 'executorRouteStrategy', type: 'string', desc: I18n.job_help_doc_f_route},
+						{name: 'executorParam', type: 'string', desc: I18n.job_help_doc_f_param},
+						{name: 'executorBlockStrategy', type: 'string', desc: I18n.job_help_doc_f_block},
+						{name: 'executorTimeout', type: 'int', desc: I18n.job_help_doc_f_timeout},
+						{name: 'executorFailRetryCount', type: 'int', desc: I18n.job_help_doc_f_retry},
+						{name: 'childJobId', type: 'string', desc: I18n.job_help_doc_f_child}
+					];
+
+					this.enumRows = [
+						{field: 'scheduleType', values: ['NONE', 'CRON', 'FIX_RATE']},
+						{field: 'misfireStrategy', values: ['DO_NOTHING', 'FIRE_ONCE_NOW']},
+						{field: 'glueType', values: ['BEAN', 'GLUE_GROOVY', 'GLUE_SHELL', 'GLUE_PYTHON', 'GLUE_PHP', 'GLUE_NODEJS', 'GLUE_POWERSHELL']},
+						{field: 'executorRouteStrategy', values: ['FIRST', 'LAST', 'ROUND', 'RANDOM', 'CONSISTENT_HASH', 'LEAST_FREQUENTLY_USED', 'LEAST_RECENTLY_USED', 'FAILOVER', 'BUSYOVER', 'SHARDING_BROADCAST']},
+						{field: 'executorBlockStrategy', values: ['SERIAL_EXECUTION', 'DISCARD_LATER', 'COVER_EARLY']}
+					];
+
+					this.errors = [
+						{scene: I18n.job_help_doc_err_auth, behavior: I18n.job_help_doc_err_auth_r},
+						{scene: I18n.job_help_doc_err_perm, behavior: I18n.job_help_doc_err_perm_r},
+						{scene: I18n.job_help_doc_err_notfound, behavior: I18n.job_help_doc_err_notfound_r},
+						{scene: I18n.job_help_doc_err_trigger, behavior: I18n.job_help_doc_err_trigger_r}
+					];
+
+					this.examples.java = 'OpenApiClient client = new OpenApiClient(\n' +
+						'        "' + this.siteBase + '",\n' +
+						'        "your_app_key", "your_app_secret");\n' +
+						'\n' +
+						'// 创建任务\n' +
+						'Map<String, Object> job = new LinkedHashMap<String, Object>();\n' +
+						'job.put("jobGroup", 1);\n' +
+						'job.put("jobDesc", "openapi demo job");\n' +
+						'job.put("author", "openapi");\n' +
+						'job.put("scheduleType", "CRON");\n' +
+						'job.put("scheduleConf", "0 0/5 * * * ?");\n' +
+						'job.put("glueType", "BEAN");\n' +
+						'job.put("executorHandler", "demoJobHandler");\n' +
+						'\n' +
+						'OpenApiResult add = client.addJob(job);\n' +
+						'int jobId = Integer.parseInt(add.getContentAsString());\n' +
+						'\n' +
+						'// 启动 + 触发（拿到 logId）\n' +
+						'client.startJob(jobId);\n' +
+						'OpenApiResult trigger = client.trigger(jobId, "hello", null);\n' +
+						'long logId = Long.parseLong(trigger.getContentAsString());\n' +
+						'\n' +
+						'// 回查执行结果\n' +
+						'OpenApiResult result = client.queryResult(logId);\n' +
+						'if (!result.isSuccess()) {\n' +
+						'    System.out.println(result.getCode() + " : " + result.getMsg());\n' +
+						'}';
+
+					this.examples.python = 'import hashlib, hmac, json, time, uuid\n' +
+						'import requests\n' +
+						'\n' +
+						'BASE_URL = "' + this.siteBase + '"\n' +
+						'APP_KEY = "your_app_key"\n' +
+						'APP_SECRET = "your_app_secret"\n' +
+						'\n' +
+						'def call(path, body=None, query=""):\n' +
+						'    raw = json.dumps(body, ensure_ascii=False, separators=(",", ":")) if body is not None else ""\n' +
+						'    ts = str(int(time.time() * 1000))\n' +
+						'    nonce = uuid.uuid4().hex\n' +
+						'    string_to_sign = "\\n".join([APP_KEY, ts, nonce, raw])\n' +
+						'    sign = hmac.new(APP_SECRET.encode("utf-8"),\n' +
+						'                   string_to_sign.encode("utf-8"), hashlib.sha256).hexdigest()\n' +
+						'    headers = {\n' +
+						'        "Content-Type": "application/json;charset=UTF-8",\n' +
+						'        "XXL-JOB-APP-KEY": APP_KEY,\n' +
+						'        "XXL-JOB-TIMESTAMP": ts,\n' +
+						'        "XXL-JOB-NONCE": nonce,\n' +
+						'        "XXL-JOB-SIGN": sign,\n' +
+						'    }\n' +
+						'    return requests.post(BASE_URL + "/openapi/v1" + path + query,\n' +
+						'                         data=raw.encode("utf-8"), headers=headers).json()\n' +
+						'\n' +
+						'print(call("/job/trigger", {"jobId": 5, "executorParam": "hello"}))\n' +
+						'print(call("/joblog/result", query="?logId=1024"))';
+
+					// 首次进入时按默认路径回填
+					that.onPathChange(that.dbg.path);
+				},
+
+				/* ---------------- 调试器 ---------------- */
+				onPathChange: function (path) {
+					var api = null;
+					for (var i = 0; i < this.apis.length; i++) {
+						if (this.apis[i].path === path) {
+							api = this.apis[i];
+							break;
+						}
+					}
+					if (!api) {
+						return;
+					}
+					this.dbg.body = api.body;
+					this.dbg.queryId = api.queryKey ? '5' : '';
+				},
+
+				buildDbgUrl: function () {
+					var url = this.openapiBase + this.dbg.path;
+					if (this.dbgQueryKey && this.dbg.queryId) {
+						url += '?' + this.dbgQueryKey + '=' + this.dbg.queryId;
+					}
+					return url;
+				},
+
+				runSign: function () {
+					var appKey = (this.dbg.appKey || '').trim();
+					var secret = (this.dbg.appSecret || '').trim();
+					if (!appKey || !secret) {
+						this.$message.warning(I18n.system_please_input + ' AppKey / AppSecret');
+						return;
+					}
+
+					var rawBody = this.dbgHasBody ? (this.dbg.body || '') : '';
+					var timestamp = String(new Date().getTime());
+					var nonce = this.uuid();
+					var stringToSign = appKey + '\n' + timestamp + '\n' + nonce + '\n' + rawBody;
+					var sign = HmacSign.hmacSha256Hex(secret, stringToSign);
+					var url = this.buildDbgUrl();
+
+					var curl = "curl -X POST '" + url + "' \\\n" +
+						"  -H 'Content-Type: application/json;charset=UTF-8' \\\n" +
+						"  -H 'XXL-JOB-APP-KEY: " + appKey + "' \\\n" +
+						"  -H 'XXL-JOB-TIMESTAMP: " + timestamp + "' \\\n" +
+						"  -H 'XXL-JOB-NONCE: " + nonce + "' \\\n" +
+						"  -H 'XXL-JOB-SIGN: " + sign + "'";
+					if (rawBody) {
+						curl += " \\\n  --data-raw '" + rawBody.replace(/'/g, "'\\''") + "'";
+					}
+
+					this.dbgResult = {
+						url: url,
+						timestamp: timestamp,
+						nonce: nonce,
+						sign: sign,
+						stringToSign: stringToSign,
+						curl: curl
+					};
+				},
+
+				uuid: function () {
+					var chars = '0123456789abcdef';
+					var out = '';
+					for (var i = 0; i < 32; i++) {
+						out += chars.charAt(Math.floor(Math.random() * 16));
+					}
+					return out;
+				},
+
+				/* ---------------- 复制 ---------------- */
+				copy: function (text) {
+					if (!text) {
+						return;
+					}
+					var that = this;
+					var fallback = function () {
+						var area = document.createElement('textarea');
+						area.value = text;
+						area.style.position = 'fixed';
+						area.style.top = '-1000px';
+						area.setAttribute('readonly', 'readonly');
+						document.body.appendChild(area);
+						area.select();
+						var ok = false;
+						try {
+							ok = document.execCommand('copy');
+						} catch (e) {
+							ok = false;
+						}
+						document.body.removeChild(area);
+						if (ok) {
+							that.$message.success(I18n.job_help_doc_copied);
+						} else {
+							that.$message.warning(I18n.job_help_doc_copy_fail);
+						}
+					};
+
+					if (navigator.clipboard && window.isSecureContext) {
+						navigator.clipboard.writeText(text).then(function () {
+							that.$message.success(I18n.job_help_doc_copied);
+						}).catch(function () {
+							fallback();
+						});
+					} else {
+						fallback();
+					}
+				}
+			}
+		});
+	})();
+</script>
+</body>
+</html>

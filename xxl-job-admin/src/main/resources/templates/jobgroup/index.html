@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+  	<#import "../common/macro.html" as netCommon>
+	<@netCommon.commonStyle />
+	<title>${I18n.admin_name}</title>
+	<style type="text/css">
+		[v-cloak] { display: none; }
+		#jobgroup-app .query-block { margin-bottom: 12px; }
+		#jobgroup-app .el-form .el-select, #jobgroup-app .el-form .el-input { width: 100%; }
+		#jobgroup-app .registry-list { line-height: 1.9; word-wrap: break-word; }
+	</style>
+</head>
+<body class="hold-transition skin-blue sidebar-mini <#if cookieMap?exists && cookieMap["xxljob_adminlte_settings"]?exists && "off" == cookieMap["xxljob_adminlte_settings"].value >sidebar-collapse</#if>">
+<div class="wrapper">
+	<!-- header -->
+	<@netCommon.commonHeader />
+	<!-- left -->
+	<@netCommon.commonLeft "jobgroup" />
+
+	<!-- Content Wrapper -->
+	<div class="content-wrapper">
+		<section class="content-header">
+			<h1>${I18n.jobgroup_name}</h1>
+		</section>
+
+		<section class="content">
+			<div id="jobgroup-app" v-cloak>
+
+				<#-- 查询区 -->
+				<div class="query-block">
+					<el-form :inline="true" size="mini">
+						<el-form-item>
+							<el-input v-model="queryParams.appname" placeholder="AppName" clearable @keyup.enter.native="handleQuery"></el-input>
+						</el-form-item>
+						<el-form-item>
+							<el-input v-model="queryParams.title" placeholder="${I18n.jobgroup_field_title}" clearable @keyup.enter.native="handleQuery"></el-input>
+						</el-form-item>
+						<el-form-item>
+							<el-button type="primary" icon="el-icon-search" @click="handleQuery">${I18n.system_search}</el-button>
+							<el-button type="success" icon="el-icon-plus" @click="handleAdd">${I18n.jobinfo_field_add}</el-button>
+						</el-form-item>
+					</el-form>
+
+					<el-table :data="dataList" v-loading="dataListLoading" border stripe size="mini" style="width:100%">
+						<el-table-column prop="appname" label="AppName" header-align="center" align="center" show-overflow-tooltip></el-table-column>
+						<el-table-column prop="title" label="${I18n.jobgroup_field_title}" header-align="center" align="center" show-overflow-tooltip></el-table-column>
+						<el-table-column label="${I18n.jobgroup_field_addressType}" width="120" header-align="center" align="center">
+							<template slot-scope="scope">{{ scope.row.addressType==0 ? '${I18n.jobgroup_field_addressType_0}' : '${I18n.jobgroup_field_addressType_1}' }}</template>
+						</el-table-column>
+						<el-table-column label="OnLine ${I18n.jobgroup_field_registryList}" width="160" header-align="center" align="center">
+							<template slot-scope="scope">
+								<el-button v-if="scope.row.registryList && scope.row.registryList.length>0" type="text" @click="showRegistry(scope.row)">${I18n.system_show} ( {{ scope.row.registryList.length }} )</el-button>
+								<span v-else style="color:#909399">${I18n.system_empty}</span>
+							</template>
+						</el-table-column>
+						<el-table-column label="${I18n.system_opt}" width="110" header-align="center" align="center">
+							<template slot-scope="scope">
+								<el-dropdown trigger="click" @command="handleCommand($event, scope.row)">
+									<el-button type="primary" size="mini">${I18n.system_opt}<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+									<el-dropdown-menu slot="dropdown">
+										<el-dropdown-item command="edit">${I18n.system_opt_edit}</el-dropdown-item>
+										<el-dropdown-item command="del">${I18n.system_opt_del}</el-dropdown-item>
+									</el-dropdown-menu>
+								</el-dropdown>
+							</template>
+						</el-table-column>
+					</el-table>
+
+					<el-pagination
+						background
+						layout="total, sizes, prev, pager, next"
+						:total="total"
+						:current-page="queryParams.page"
+						:page-size="queryParams.rows"
+						:page-sizes="[10, 20, 50, 100]"
+						@size-change="sizeChangeHandle"
+						@current-change="currentChangeHandle"
+						style="margin-top:16px;text-align:center;">
+					</el-pagination>
+				</div>
+
+				<#-- 新增/编辑 弹窗 -->
+				<el-dialog :title="formTitle" :visible.sync="formDialogVisible" :append-to-body="true" width="600px" top="8vh" :close-on-click-modal="false">
+					<el-form :model="dataForm" :rules="dataRule" ref="dataForm" label-width="130px" size="small">
+						<el-form-item label="AppName" prop="appname">
+							<el-input v-model="dataForm.appname" maxlength="64" placeholder="${I18n.system_please_input}AppName"></el-input>
+						</el-form-item>
+						<el-form-item label="${I18n.jobgroup_field_title}" prop="title">
+							<el-input v-model="dataForm.title" maxlength="12" placeholder="${I18n.system_please_input}${I18n.jobgroup_field_title}"></el-input>
+						</el-form-item>
+						<el-form-item label="${I18n.jobgroup_field_addressType}">
+							<el-radio-group v-model="dataForm.addressType" @change="handleAddressTypeChange">
+								<el-radio :label="0">${I18n.jobgroup_field_addressType_0}</el-radio>
+								<el-radio :label="1">${I18n.jobgroup_field_addressType_1}</el-radio>
+							</el-radio-group>
+						</el-form-item>
+						<el-form-item label="${I18n.jobgroup_field_registryList}">
+							<el-input type="textarea" :rows="4" v-model="dataForm.addressList" maxlength="20000" :readonly="dataForm.addressType==0" placeholder="${I18n.jobgroup_field_registryList_placeholder}"></el-input>
+						</el-form-item>
+					</el-form>
+					<span slot="footer">
+						<el-button @click="formDialogVisible=false">${I18n.system_cancel}</el-button>
+						<el-button type="primary" @click="dataFormSubmit">${I18n.system_save}</el-button>
+					</span>
+				</el-dialog>
+
+				<#-- 注册列表查看 弹窗 -->
+				<el-dialog title="${I18n.jobinfo_opt_registryinfo}" :visible.sync="registryDialogVisible" :append-to-body="true" width="420px">
+					<div class="registry-list">
+						<div v-for="(addr, i) in registryList" :key="i">{{ i+1 }}. <el-tag size="mini" type="success">{{ addr }}</el-tag></div>
+						<div v-if="registryList.length==0" style="color:#909399;text-align:center;">${I18n.system_empty}</div>
+					</div>
+					<span slot="footer">
+						<el-button type="primary" @click="registryDialogVisible=false">${I18n.system_ok}</el-button>
+					</span>
+				</el-dialog>
+
+			</div>
+		</section>
+	</div>
+
+	<!-- footer -->
+	<@netCommon.commonFooter />
+</div>
+
+<@netCommon.commonScript />
+<script type="text/javascript">
+new Vue({
+	el: '#jobgroup-app',
+	data: {
+		dataList: [],
+		dataListLoading: false,
+		total: 0,
+		queryParams: {
+			appname: '',
+			title: '',
+			page: 1,
+			rows: 10
+		},
+
+		formDialogVisible: false,
+		formTitle: '',
+		isEdit: false,
+		dataForm: {},
+		dataRule: {
+			appname: [
+				{ required: true, message: '${I18n.system_please_input}AppName', trigger: 'blur' },
+				{ min: 4, max: 64, message: '${I18n.jobgroup_field_appname_length}', trigger: 'blur' },
+				{ pattern: /^[a-z][a-zA-Z0-9\-]*$/, message: '${I18n.jobgroup_field_appname_limit}', trigger: 'blur' }
+			],
+			title: [
+				{ required: true, message: '${I18n.system_please_input}${I18n.jobgroup_field_title}', trigger: 'blur' },
+				{ min: 4, max: 12, message: '${I18n.jobgroup_field_title_length}', trigger: 'blur' }
+			]
+		},
+
+		registryDialogVisible: false,
+		registryList: []
+	},
+	created: function () {
+		this.getDataList();
+	},
+	methods: {
+		handleQuery: function () { this.queryParams.page = 1; this.getDataList(); },
+		getDataList: function () {
+			var that = this;
+			this.dataListLoading = true;
+			$.ajax({
+				type: 'POST',
+				url: base_url + '/jobgroup/pageList',
+				data: {
+					start: (this.queryParams.page - 1) * this.queryParams.rows,
+					length: this.queryParams.rows,
+					appname: this.queryParams.appname,
+					title: this.queryParams.title
+				},
+				dataType: 'json',
+				success: function (res) {
+					that.dataListLoading = false;
+					that.dataList = res.data || [];
+					that.total = parseInt(res.recordsTotal || 0);
+				},
+				error: function () { that.dataListLoading = false; that.$message.error('${I18n.system_fail}'); }
+			});
+		},
+		sizeChangeHandle: function (val) { this.queryParams.rows = val; this.queryParams.page = 1; this.getDataList(); },
+		currentChangeHandle: function (val) { this.queryParams.page = val; this.getDataList(); },
+
+		handleCommand: function (cmd, row) {
+			if (cmd == 'edit') { this.handleUpdate(row); }
+			else if (cmd == 'del') { this.handleDelete(row); }
+		},
+
+		showRegistry: function (row) {
+			this.registryList = row.registryList || [];
+			this.registryDialogVisible = true;
+		},
+
+		resetForm: function () {
+			this.dataForm = { id: null, appname: '', title: '', addressType: 0, addressList: '' };
+		},
+		handleAddressTypeChange: function (val) {
+			if (val == 0) { this.dataForm.addressList = ''; }
+		},
+		handleAdd: function () {
+			this.resetForm();
+			this.isEdit = false;
+			this.formTitle = '${I18n.jobgroup_add}';
+			this.formDialogVisible = true;
+			this.$nextTick(this.afterFormOpen);
+		},
+		handleUpdate: function (row) {
+			this.isEdit = true;
+			this.formTitle = '${I18n.jobgroup_edit}';
+			this.dataForm = {
+				id: row.id, appname: row.appname, title: row.title,
+				addressType: row.addressType, addressList: row.addressList
+			};
+			this.formDialogVisible = true;
+			this.$nextTick(this.afterFormOpen);
+		},
+		afterFormOpen: function () {
+			if (this.$refs.dataForm) { this.$refs.dataForm.clearValidate(); }
+		},
+		dataFormSubmit: function () {
+			var that = this;
+			this.$refs.dataForm.validate(function (valid) {
+				if (!valid) { return; }
+				var payload = $.extend(true, {}, that.dataForm);
+				if (!payload.id) { delete payload.id; }
+				var url = that.isEdit ? (base_url + '/jobgroup/update') : (base_url + '/jobgroup/save');
+				that.post(url, payload, function (res) {
+					if (res.code == 200) {
+						that.formDialogVisible = false;
+						that.$message.success(that.isEdit ? '${I18n.system_update_suc}' : '${I18n.system_add_suc}');
+						that.getDataList();
+					} else {
+						that.$message.error(res.msg || '${I18n.system_fail}');
+					}
+				});
+			});
+		},
+		handleDelete: function (row) {
+			var that = this;
+			this.$confirm('${I18n.system_ok}${I18n.jobgroup_del}?', '${I18n.system_tips}', {
+				confirmButtonText: '${I18n.system_ok}', cancelButtonText: '${I18n.system_cancel}', type: 'warning'
+			}).then(function () {
+				that.post(base_url + '/jobgroup/remove', { id: row.id }, function (res) {
+					if (res.code == 200) { that.$message.success('${I18n.jobgroup_del}${I18n.system_success}'); that.getDataList(); }
+					else { that.$message.error(res.msg || '${I18n.jobgroup_del}${I18n.system_fail}'); }
+				});
+			}).catch(function () {});
+		},
+
+		post: function (url, data, cb) {
+			var that = this;
+			$.ajax({
+				type: 'POST', url: url, data: data, dataType: 'json',
+				success: cb,
+				error: function (xhr) { that.$message.error('${I18n.system_fail}' + (xhr && xhr.status ? (' [' + xhr.status + ']') : '')); }
+			});
+		}
+	}
+});
+</script>
+</body>
+</html>

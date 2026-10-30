@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html>
+<head>
+  	<#import "../common/macro.html" as netCommon>
+	<@netCommon.commonStyle />
+	<title>${I18n.admin_name}</title>
+	<style type="text/css">
+		[v-cloak] { display: none; }
+		#jobinfo-app .query-block { margin-bottom: 12px; }
+		#jobinfo-app .group-title {
+			margin: 4px 0 14px; padding-bottom: 6px; text-align: left;
+			border-bottom: 1px solid #e5e5e5; color: #909399; font-size: 13px;
+		}
+		#jobinfo-app .el-form .el-select, #jobinfo-app .el-form .el-input { width: 100%; }
+		#jobinfo-app .opt-cell .el-button--mini { padding: 5px 8px; }
+	</style>
+</head>
+<body class="hold-transition skin-blue sidebar-mini <#if cookieMap?exists && cookieMap["xxljob_adminlte_settings"]?exists && "off" == cookieMap["xxljob_adminlte_settings"].value >sidebar-collapse</#if>">
+<div class="wrapper">
+	<!-- header -->
+	<@netCommon.commonHeader />
+	<!-- left -->
+	<@netCommon.commonLeft "jobinfo" />
+
+	<!-- Content Wrapper -->
+	<div class="content-wrapper">
+		<section class="content-header">
+			<h1>${I18n.jobinfo_name}</h1>
+		</section>
+
+		<section class="content">
+			<div id="jobinfo-app" v-cloak>
+
+				<#-- 查询区 -->
+				<div class="query-block" v-show="showList">
+					<el-form :inline="true" size="mini">
+						<el-form-item>
+							<el-select v-model="queryParams.jobGroup" @change="getDataList">
+								<el-option v-for="g in jobGroupList" :key="g.id" :label="g.title" :value="g.id"></el-option>
+							</el-select>
+						</el-form-item>
+						<el-form-item>
+							<el-select v-model="queryParams.triggerStatus" @change="handleQuery">
+								<el-option :value="-1" label="${I18n.system_all}"></el-option>
+								<el-option :value="0" label="${I18n.jobinfo_opt_stop}"></el-option>
+								<el-option :value="1" label="${I18n.jobinfo_opt_start}"></el-option>
+							</el-select>
+						</el-form-item>
+						<el-form-item>
+							<el-input v-model="queryParams.jobDesc" placeholder="${I18n.jobinfo_field_jobdesc}" clearable @keyup.enter.native="handleQuery"></el-input>
+						</el-form-item>
+						<el-form-item>
+							<el-input v-model="queryParams.executorHandler" placeholder="JobHandler" clearable @keyup.enter.native="handleQuery"></el-input>
+						</el-form-item>
+						<el-form-item>
+							<el-input v-model="queryParams.author" placeholder="${I18n.jobinfo_field_author}" clearable @keyup.enter.native="handleQuery"></el-input>
+						</el-form-item>
+						<el-form-item>
+							<el-button type="primary" icon="el-icon-search" @click="handleQuery">${I18n.system_search}</el-button>
+							<el-button type="success" icon="el-icon-plus" @click="handleAdd">${I18n.jobinfo_field_add}</el-button>
+						</el-form-item>
+					</el-form>
+
+					<el-table :data="dataList" v-loading="dataListLoading" border stripe size="mini" style="width:100%">
+						<el-table-column prop="id" label="${I18n.jobinfo_field_id}" width="60" header-align="center" align="center"></el-table-column>
+						<el-table-column label="${I18n.jobinfo_field_jobgroup}" header-align="center" align="center" show-overflow-tooltip>
+							<template slot-scope="scope">{{ groupTitle(scope.row.jobGroup) }}</template>
+						</el-table-column>
+						<el-table-column prop="jobDesc" label="${I18n.jobinfo_field_jobdesc}" header-align="center" align="center" show-overflow-tooltip></el-table-column>
+						<el-table-column label="${I18n.schedule_type}" header-align="center" align="center" show-overflow-tooltip>
+							<template slot-scope="scope">{{ scope.row.scheduleType }}{{ scope.row.scheduleConf ? ('：' + scope.row.scheduleConf) : '' }}</template>
+						</el-table-column>
+						<el-table-column label="${I18n.jobinfo_field_gluetype}" header-align="center" align="center" show-overflow-tooltip>
+							<template slot-scope="scope">{{ glueTypeTitle(scope.row.glueType) }}{{ scope.row.executorHandler ? ('：' + scope.row.executorHandler) : '' }}</template>
+						</el-table-column>
+						<el-table-column prop="author" label="${I18n.jobinfo_field_author}" width="90" header-align="center" align="center" show-overflow-tooltip></el-table-column>
+						<el-table-column label="${I18n.system_status}" width="90" header-align="center" align="center">
+							<template slot-scope="scope">
+								<el-tag v-if="scope.row.triggerStatus==1" type="success" size="mini" effect="dark">RUNNING</el-tag>
+								<el-tag v-else type="info" size="mini">STOP</el-tag>
+							</template>
+						</el-table-column>
+						<el-table-column label="${I18n.system_opt}" width="110" header-align="center" align="center" class-name="opt-cell">
+							<template slot-scope="scope">
+								<el-dropdown trigger="click" @command="handleCommand($event, scope.row)">
+									<el-button type="primary" size="mini">${I18n.system_opt}<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+									<el-dropdown-menu slot="dropdown">
+										<el-dropdown-item command="trigger">${I18n.jobinfo_opt_run}</el-dropdown-item>
+										<el-dropdown-item command="log">${I18n.jobinfo_opt_log}</el-dropdown-item>
+										<el-dropdown-item command="registry">${I18n.jobinfo_opt_registryinfo}</el-dropdown-item>
+										<el-dropdown-item command="nextTime" v-if="scope.row.scheduleType=='CRON' || scope.row.scheduleType=='FIX_RATE'">${I18n.jobinfo_opt_next_time}</el-dropdown-item>
+										<el-dropdown-item command="glueIde" v-if="scope.row.glueType!='BEAN'">GLUE IDE</el-dropdown-item>
+										<el-dropdown-item command="startStop">{{ scope.row.triggerStatus==1 ? '${I18n.jobinfo_opt_stop}' : '${I18n.jobinfo_opt_start}' }}</el-dropdown-item>
+										<el-dropdown-item command="edit">${I18n.system_opt_edit}</el-dropdown-item>
+										<el-dropdown-item command="copy">${I18n.system_opt_copy}</el-dropdown-item>
+										<el-dropdown-item command="del">${I18n.system_opt_del}</el-dropdown-item>
+									</el-dropdown-menu>
+								</el-dropdown>
+							</template>
+						</el-table-column>
+					</el-table>
+
+					<el-pagination
+						background
+						layout="total, sizes, prev, pager, next"
+						:total="total"
+						:current-page="queryParams.page"
+						:page-size="queryParams.rows"
+						:page-sizes="[10, 20, 50, 100]"
+						@size-change="sizeChangeHandle"
+						@current-change="currentChangeHandle"
+						style="margin-top:16px;text-align:center;">
+					</el-pagination>
+				</div>
+
+				<#-- 新增/编辑 弹窗 -->
+				<el-dialog :title="formTitle" :visible.sync="formDialogVisible" :append-to-body="true" width="720px" top="6vh" :close-on-click-modal="false">
+					<el-form :model="dataForm" :rules="dataRule" ref="dataForm" label-width="130px" size="small">
+						<div class="group-title">${I18n.jobinfo_conf_base}</div>
+						<el-row :gutter="10">
+							<el-col :span="12">
+								<el-form-item label="${I18n.jobinfo_field_jobgroup}">
+									<el-select v-model="dataForm.jobGroup">
+										<el-option v-for="g in jobGroupList" :key="g.id" :label="g.title" :value="g.id"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="12">
+								<el-form-item label="${I18n.jobinfo_field_jobdesc}" prop="jobDesc">
+									<el-input v-model="dataForm.jobDesc" maxlength="50" placeholder="${I18n.jobinfo_field_jobdesc}"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="12">
+								<el-form-item label="${I18n.jobinfo_field_author}" prop="author">
+									<el-input v-model="dataForm.author" maxlength="50" placeholder="${I18n.jobinfo_field_author}"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="12">
+								<el-form-item label="${I18n.jobinfo_field_alarmemail}">
+									<el-input v-model="dataForm.alarmEmail" maxlength="100" placeholder="${I18n.jobinfo_field_alarmemail_placeholder}"></el-input>
+								</el-form-item>
+							</el-col>
+						</el-row>
+
+						<div class="group-title">${I18n.jobinfo_conf_schedule}</div>
+						<el-row :gutter="10">
+							<el-col :span="12">
+								<el-form-item label="${I18n.schedule_type}">
+									<el-select v-model="dataForm.scheduleType" @change="handleScheduleTypeChange">
+										<el-option v-for="it in scheduleTypeList" :key="it.name" :label="it.title" :value="it.name"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="12">
+								<el-form-item label="Cron" v-show="dataForm.scheduleType=='CRON'">
+									<div ref="cronBox"><input type="text" name="schedule_conf_CRON" class="form-control" style="width:100%;"></div>
+								</el-form-item>
+								<el-form-item label="${I18n.schedule_type_fix_rate}" v-show="dataForm.scheduleType=='FIX_RATE'">
+									<el-input v-model="dataForm.scheduleConf" maxlength="10" placeholder="${I18n.system_please_input} (Second)"></el-input>
+								</el-form-item>
+								<el-form-item label="${I18n.schedule_type_fix_delay}" v-show="dataForm.scheduleType=='FIX_DELAY'">
+									<el-input v-model="dataForm.scheduleConf" maxlength="10" placeholder="${I18n.system_please_input} (Second)"></el-input>
+								</el-form-item>
+							</el-col>
+						</el-row>
+
+						<div class="group-title">${I18n.jobinfo_conf_job}</div>
+						<el-row :gutter="10">
+							<el-col :span="12">
+								<el-form-item label="${I18n.jobinfo_field_gluetype}">
+									<el-select v-model="dataForm.glueType" :disabled="isEdit" @change="handleGlueTypeChange">
+										<el-option v-for="it in glueTypeList" :key="it.name" :label="it.title" :value="it.name"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="12">
+								<el-form-item label="JobHandler">
+									<el-input v-model="dataForm.executorHandler" :readonly="dataForm.glueType!='BEAN'" maxlength="100" placeholder="JobHandler"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="24">
+								<el-form-item label="${I18n.jobinfo_field_executorparam}">
+									<el-input type="textarea" :rows="2" v-model="dataForm.executorParam" maxlength="512" placeholder="${I18n.jobinfo_field_executorparam}"></el-input>
+								</el-form-item>
+							</el-col>
+						</el-row>
+
+						<div class="group-title">${I18n.jobinfo_conf_advanced}</div>
+						<el-row :gutter="10">
+							<el-col :span="12">
+								<el-form-item label="${I18n.jobinfo_field_executorRouteStrategy}">
+									<el-select v-model="dataForm.executorRouteStrategy">
+										<el-option v-for="it in executorRouteStrategyList" :key="it.name" :label="it.title" :value="it.name"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="12">
+								<el-form-item label="${I18n.jobinfo_field_childJobId}">
+									<el-input v-model="dataForm.childJobId" maxlength="100" placeholder="${I18n.jobinfo_field_childJobId_placeholder}"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="12">
+								<el-form-item label="${I18n.misfire_strategy}">
+									<el-select v-model="dataForm.misfireStrategy">
+										<el-option v-for="it in misfireStrategyList" :key="it.name" :label="it.title" :value="it.name"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="12">
+								<el-form-item label="${I18n.jobinfo_field_executorBlockStrategy}">
+									<el-select v-model="dataForm.executorBlockStrategy">
+										<el-option v-for="it in executorBlockStrategyList" :key="it.name" :label="it.title" :value="it.name"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="12">
+								<el-form-item label="${I18n.jobinfo_field_timeout}">
+									<el-input v-model="dataForm.executorTimeout" maxlength="6" placeholder="${I18n.jobinfo_field_executorTimeout_placeholder}"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="12">
+								<el-form-item label="${I18n.jobinfo_field_executorFailRetryCount}">
+									<el-input v-model="dataForm.executorFailRetryCount" maxlength="4" placeholder="${I18n.jobinfo_field_executorFailRetryCount_placeholder}"></el-input>
+								</el-form-item>
+							</el-col>
+						</el-row>
+					</el-form>
+					<span slot="footer">
+						<el-button @click="formDialogVisible=false">${I18n.system_cancel}</el-button>
+						<el-button type="primary" @click="dataFormSubmit">${I18n.system_save}</el-button>
+					</span>
+				</el-dialog>
+
+				<#-- 运行一次 弹窗 -->
+				<el-dialog title="${I18n.jobinfo_opt_run}" :visible.sync="triggerDialogVisible" :append-to-body="true" width="560px" :close-on-click-modal="false">
+					<el-form :model="triggerForm" label-width="120px" size="small">
+						<el-form-item label="${I18n.jobinfo_field_executorparam}">
+							<el-input type="textarea" :rows="2" v-model="triggerForm.executorParam" maxlength="512" placeholder="${I18n.jobinfo_field_executorparam}"></el-input>
+						</el-form-item>
+						<el-form-item label="${I18n.jobgroup_field_registryList}">
+							<el-input type="textarea" :rows="2" v-model="triggerForm.addressList" maxlength="512" placeholder="${I18n.jobinfo_opt_run_tips}"></el-input>
+						</el-form-item>
+					</el-form>
+					<span slot="footer">
+						<el-button @click="triggerDialogVisible=false">${I18n.system_cancel}</el-button>
+						<el-button type="primary" @click="triggerSubmit">${I18n.system_save}</el-button>
+					</span>
+				</el-dialog>
+
+				<#-- 通用信息 弹窗（注册中心 / 下次触发时间） -->
+				<el-dialog :title="infoTitle" :visible.sync="infoDialogVisible" :append-to-body="true" width="420px">
+					<div v-html="infoHtml" style="text-align:center;line-height:1.9;"></div>
+					<span slot="footer">
+						<el-button type="primary" @click="infoDialogVisible=false">${I18n.system_ok}</el-button>
+					</span>
+				</el-dialog>
+
+			</div>
+		</section>
+	</div>
+
+	<!-- footer -->
+	<@netCommon.commonFooter />
+</div>
+
+<@netCommon.commonScript />
+<#-- cronGen -->
+<script src="${request.contextPath}/static/plugins/cronGen/cronGen<#if I18n.admin_i18n?default('')?length gt 0 >_${I18n.admin_i18n}</#if>.js"></script>
+<script type="text/javascript">
+new Vue({
+	el: '#jobinfo-app',
+	data: {
+		showList: true,
+		// 字典（initData 下发）
+		scheduleTypeList: [],
+		glueTypeList: [],
+		executorRouteStrategyList: [],
+		executorBlockStrategyList: [],
+		misfireStrategyList: [],
+		jobGroupList: [],
+		loginUser: {},
+
+		// 列表
+		dataList: [],
+		dataListLoading: false,
+		total: 0,
+		queryParams: {
+			jobGroup: -1,
+			triggerStatus: -1,
+			jobDesc: '',
+			executorHandler: '',
+			author: '',
+			page: 1,
+			rows: 10
+		},
+
+		// 新增/编辑
+		formDialogVisible: false,
+		formTitle: '',
+		isEdit: false,
+		dataForm: {},
+		dataRule: {
+			jobDesc: [ { required: true, message: '${I18n.system_please_input}${I18n.jobinfo_field_jobdesc}', trigger: 'blur' } ],
+			author: [ { required: true, message: '${I18n.system_please_input}${I18n.jobinfo_field_author}', trigger: 'blur' } ]
+		},
+
+		// 触发
+		triggerDialogVisible: false,
+		triggerForm: { id: 0, executorParam: '', addressList: '' },
+
+		// 通用信息弹窗
+		infoDialogVisible: false,
+		infoTitle: '',
+		infoHtml: ''
+	},
+	created: function () {
+		this.initData();
+	},
+	methods: {
+		// 初始化数据（字典 + 执行器 + 登录用户），替代原 model.addAttribute 服务端渲染
+		initData: function () {
+			var that = this;
+			$.ajax({
+				type: 'GET',
+				url: base_url + '/jobinfo/initData' + that.urlJobGroup(),
+				dataType: 'json',
+				success: function (res) {
+					if (res.code != 200) { that.$message.error(res.msg || '${I18n.system_fail}'); return; }
+					var c = res.content;
+					that.scheduleTypeList = c.scheduleTypeList;
+					that.glueTypeList = c.glueTypeList;
+					that.executorRouteStrategyList = c.executorRouteStrategyList;
+					that.executorBlockStrategyList = c.executorBlockStrategyList;
+					that.misfireStrategyList = c.misfireStrategyList;
+					that.jobGroupList = c.jobGroupList;
+					that.loginUser = c.loginUser || {};
+					// 默认选中执行器
+					var sel = c.jobGroup;
+					if (!(sel > 0) || !that.jobGroupList.some(function(g){ return g.id == sel; })) {
+						sel = that.jobGroupList.length > 0 ? that.jobGroupList[0].id : -1;
+					}
+					that.queryParams.jobGroup = sel;
+					that.getDataList();
+				}
+			});
+		},
+		// 从地址栏解析 jobGroup 查询参数（?jobGroup=xx）
+		urlJobGroup: function () {
+			var m = /[?&]jobGroup=([^&]+)/.exec(window.location.search);
+			return m ? ('?jobGroup=' + m[1]) : '';
+		},
+
+		// -------------------- 列表 --------------------
+		handleQuery: function () { this.queryParams.page = 1; this.getDataList(); },
+		getDataList: function () {
+			var that = this;
+			this.dataListLoading = true;
+			$.ajax({
+				type: 'POST',
+				url: base_url + '/jobinfo/pageList',
+				data: {
+					start: (this.queryParams.page - 1) * this.queryParams.rows,
+					length: this.queryParams.rows,
+					jobGroup: this.queryParams.jobGroup,
+					triggerStatus: this.queryParams.triggerStatus,
+					jobDesc: this.queryParams.jobDesc,
+					executorHandler: this.queryParams.executorHandler,
+					author: this.queryParams.author
+				},
+				dataType: 'json',
+				success: function (res) {
+					that.dataListLoading = false;
+					that.dataList = res.data || [];
+					that.total = parseInt(res.recordsTotal || 0);
+				},
+				error: function () { that.dataListLoading = false; that.$message.error('${I18n.system_fail}'); }
+			});
+		},
+		sizeChangeHandle: function (val) { this.queryParams.rows = val; this.queryParams.page = 1; this.getDataList(); },
+		currentChangeHandle: function (val) { this.queryParams.page = val; this.getDataList(); },
+
+		groupTitle: function (id) {
+			var g = this.jobGroupList.find(function (x) { return x.id == id; });
+			return g ? g.title : id;
+		},
+		glueTypeTitle: function (name) {
+			var g = this.glueTypeList.find(function (x) { return x.name == name; });
+			return g ? g.title : name;
+		},
+
+		// -------------------- 行操作分发 --------------------
+		handleCommand: function (cmd, row) {
+			if (cmd == 'trigger') { this.openTrigger(row); }
+			else if (cmd == 'log') { window.location.href = base_url + '/joblog?jobId=' + row.id; }
+			else if (cmd == 'registry') { this.openRegistry(row); }
+			else if (cmd == 'nextTime') { this.openNextTime(row); }
+			else if (cmd == 'glueIde') { window.open(base_url + '/jobcode?jobId=' + row.id); }
+			else if (cmd == 'startStop') { this.startStop(row); }
+			else if (cmd == 'edit') { this.handleUpdate(row); }
+			else if (cmd == 'copy') { this.handleCopy(row); }
+			else if (cmd == 'del') { this.handleDelete(row); }
+		},
+
+		// 启停 / 删除
+		startStop: function (row) {
+			var that = this;
+			var isRun = row.triggerStatus == 1;
+			var typeName = isRun ? '${I18n.jobinfo_opt_stop}' : '${I18n.jobinfo_opt_start}';
+			var url = base_url + (isRun ? '/jobinfo/stop' : '/jobinfo/start');
+			this.$confirm('${I18n.system_ok}' + typeName + '?', '${I18n.system_tips}', {
+				confirmButtonText: '${I18n.system_ok}', cancelButtonText: '${I18n.system_cancel}', type: 'warning'
+			}).then(function () {
+				that.post(url, { id: row.id }, function (res) {
+					if (res.code == 200) { that.$message.success(typeName + '${I18n.system_success}'); that.getDataList(); }
+					else { that.$message.error(res.msg || (typeName + '${I18n.system_fail}')); }
+				});
+			}).catch(function () {});
+		},
+		handleDelete: function (row) {
+			var that = this;
+			this.$confirm('${I18n.system_ok}${I18n.system_opt_del}?', '${I18n.system_tips}', {
+				confirmButtonText: '${I18n.system_ok}', cancelButtonText: '${I18n.system_cancel}', type: 'warning'
+			}).then(function () {
+				that.post(base_url + '/jobinfo/remove', { id: row.id }, function (res) {
+					if (res.code == 200) { that.$message.success('${I18n.system_opt_del}${I18n.system_success}'); that.getDataList(); }
+					else { that.$message.error(res.msg || '${I18n.system_opt_del}${I18n.system_fail}'); }
+				});
+			}).catch(function () {});
+		},
+
+		// 注册中心
+		openRegistry: function (row) {
+			var that = this;
+			this.post(base_url + '/jobgroup/loadById', { id: row.jobGroup }, function (res) {
+				var html = '';
+				if (res.code == 200 && res.content && res.content.registryList) {
+					res.content.registryList.forEach(function (addr, i) {
+						html += (i + 1) + '. <span class="badge bg-green">' + addr + '</span><br>';
+					});
+				}
+				if (html == '') { html = '<span style="color:#909399">-</span>'; }
+				that.infoTitle = '${I18n.jobinfo_opt_registryinfo}';
+				that.infoHtml = html;
+				that.infoDialogVisible = true;
+			});
+		},
+		// 下次触发时间
+		openNextTime: function (row) {
+			var that = this;
+			this.post(base_url + '/jobinfo/nextTriggerTime', { scheduleType: row.scheduleType, scheduleConf: row.scheduleConf }, function (res) {
+				if (res.code != 200) { that.infoTitle = '${I18n.jobinfo_opt_next_time}'; that.infoHtml = res.msg; that.infoDialogVisible = true; return; }
+				var html = '';
+				(res.content || []).forEach(function (t) { html += '<span>' + t + '</span><br>'; });
+				that.infoTitle = '${I18n.jobinfo_opt_next_time}';
+				that.infoHtml = html;
+				that.infoDialogVisible = true;
+			});
+		},
+
+		// -------------------- 触发一次 --------------------
+		openTrigger: function (row) {
+			this.triggerForm = { id: row.id, executorParam: row.executorParam, addressList: '' };
+			this.triggerDialogVisible = true;
+		},
+		triggerSubmit: function () {
+			var that = this;
+			this.post(base_url + '/jobinfo/trigger', {
+				id: this.triggerForm.id, executorParam: this.triggerForm.executorParam, addressList: this.triggerForm.addressList
+			}, function (res) {
+				if (res.code == 200) { that.triggerDialogVisible = false; that.$message.success('${I18n.jobinfo_opt_run}${I18n.system_success}'); }
+				else { that.$message.error(res.msg || '${I18n.jobinfo_opt_run}${I18n.system_fail}'); }
+			});
+		},
+
+		// -------------------- 新增 / 编辑 / 复制 --------------------
+		resetForm: function () {
+			this.dataForm = {
+				id: null,
+				jobGroup: this.queryParams.jobGroup,
+				jobDesc: '', author: '', alarmEmail: '',
+				scheduleType: 'CRON', scheduleConf: '',
+				glueType: 'BEAN', executorHandler: '', executorParam: '',
+				executorRouteStrategy: 'FIRST', childJobId: '',
+				misfireStrategy: 'DO_NOTHING', executorBlockStrategy: 'SERIAL_EXECUTION',
+				executorTimeout: '', executorFailRetryCount: '',
+				glueRemark: 'GLUE代码初始化', glueSource: ''
+			};
+		},
+		handleAdd: function () {
+			this.resetForm();
+			this.isEdit = false;
+			this.formTitle = '${I18n.jobinfo_field_add}';
+			this.formDialogVisible = true;
+			this.$nextTick(this.afterFormOpen);
+		},
+		handleUpdate: function (row) {
+			this.isEdit = true;
+			this.formTitle = '${I18n.jobinfo_field_update}';
+			this.dataForm = {
+				id: row.id, jobGroup: row.jobGroup, jobDesc: row.jobDesc, author: row.author, alarmEmail: row.alarmEmail,
+				scheduleType: row.scheduleType, scheduleConf: row.scheduleConf,
+				glueType: row.glueType, executorHandler: row.executorHandler, executorParam: row.executorParam,
+				executorRouteStrategy: row.executorRouteStrategy, childJobId: row.childJobId,
+				misfireStrategy: row.misfireStrategy, executorBlockStrategy: row.executorBlockStrategy,
+				executorTimeout: row.executorTimeout == null ? '' : row.executorTimeout,
+				executorFailRetryCount: row.executorFailRetryCount == null ? '' : row.executorFailRetryCount,
+				glueRemark: row.glueRemark, glueSource: row.glueSource
+			};
+			this.formDialogVisible = true;
+			this.$nextTick(this.afterFormOpen);
+		},
+		handleCopy: function (row) {
+			this.handleUpdate(row);
+			this.isEdit = false;
+			this.dataForm.id = null;
+			this.formTitle = '${I18n.jobinfo_field_add}';
+		},
+		handleScheduleTypeChange: function () {
+			this.dataForm.scheduleConf = '';
+			this.$nextTick(this.initCronGen);
+		},
+		handleGlueTypeChange: function () {
+			var gt = this.dataForm.glueType;
+			if (gt != 'BEAN') { this.dataForm.executorHandler = ''; }
+			this.dataForm.glueSource = this.glueSourceByType(gt);
+		},
+		// 弹窗打开后：清理上次校验状态 + 重建 cron 控件
+		afterFormOpen: function () {
+			if (this.$refs.dataForm) { this.$refs.dataForm.clearValidate(); }
+			this.initCronGen();
+		},
+		// cronGen 初始化：重建容器 innerHTML，彻底移除上一次 cronGen 插件追加的克隆节点，
+		// 避免多次打开弹窗导致重复输入框与“幽灵节点”读到旧值。
+		initCronGen: function () {
+			var box = this.$refs.cronBox;
+			if (!box) { return; }
+			if (this.dataForm.scheduleType != 'CRON') { box.innerHTML = ''; return; }
+			box.innerHTML = '<input type="text" name="schedule_conf_CRON" class="form-control" style="width:100%;">';
+			var $input = $(box).find('input[name="schedule_conf_CRON"]');
+			$input.val(this.dataForm.scheduleConf || '');
+			try { $input.cronGen({}); } catch (e) {}
+		},
+		dataFormSubmit: function () {
+			var that = this;
+			this.$refs.dataForm.validate(function (valid) {
+				if (!valid) { return; }
+				// scheduleConf
+				if (that.dataForm.scheduleType == 'CRON') {
+					var cron = that.readCronGen();
+					if (!cron || !/^\S/.test(cron)) { that.$message.error('${I18n.system_please_input} Cron'); return; }
+					that.dataForm.scheduleConf = cron;
+				}
+				// 数字字段兜底
+				that.dataForm.executorTimeout = /^\d+$/.test(that.dataForm.executorTimeout) ? that.dataForm.executorTimeout : 0;
+				that.dataForm.executorFailRetryCount = /^\d+$/.test(that.dataForm.executorFailRetryCount) ? that.dataForm.executorFailRetryCount : 0;
+
+				var url = that.dataForm.id ? (base_url + '/jobinfo/update') : (base_url + '/jobinfo/add');
+				// 新增时不能携带 id（XxlJobInfo.id 为基本类型 int，空串会绑定失败 -> 400）
+				var payload = $.extend(true, {}, that.dataForm);
+				if (!payload.id) { delete payload.id; }
+				that.post(url, payload, function (res) {
+					if (res.code == 200) {
+						that.formDialogVisible = false;
+						that.$message.success(that.dataForm.id ? '${I18n.system_update_suc}' : '${I18n.system_add_suc}');
+						that.getDataList();
+					} else {
+						that.$message.error(res.msg || '${I18n.system_fail}');
+					}
+				});
+			});
+		},
+		// 从 cronGen 生成的隐藏字段读取 cron 表达式
+		readCronGen: function () {
+			var box = this.$refs.cronBox;
+			if (!box) { return ''; }
+			var disp = box.querySelector('input[name="cronGen_display"]');
+			if (disp && disp.value) { return disp.value; }
+			var raw = box.querySelector('input[name="schedule_conf_CRON"]');
+			return raw ? raw.value : '';
+		},
+		// GLUE 模板（与旧版页面内置模板一致，i18n 通过前端 I18n 注入）
+		glueSourceByType: function (gt) {
+			var loc = '${I18n.jobinfo_script_location}', p = '${I18n.jobinfo_field_executorparam}',
+				idx = '${I18n.jobinfo_shard_index}', tot = '${I18n.jobinfo_shard_total}';
+			if (gt == 'GLUE_GROOVY') {
+				return 'package com.xxl.job.service.handler;\n\nimport com.xxl.job.core.context.XxlJobHelper;\nimport com.xxl.job.core.handler.IJobHandler;\n\npublic class DemoGlueJobHandler extends IJobHandler {\n\n\t@Override\n\tpublic void execute() throws Exception {\n\t\tXxlJobHelper.log("XXL-JOB, Hello World.");\n\t}\n\n}';
+			} else if (gt == 'GLUE_SHELL') {
+				return '#!/bin/bash\necho "xxl-job: hello shell"\n\necho "' + loc + '：$0"\necho "' + p + '：$1"\necho "' + idx + ' = $2"\necho "' + tot + ' = $3"\n\necho "Good bye!"\nexit 0';
+			} else if (gt == 'GLUE_PYTHON') {
+				return '#!/usr/bin/python\n# -*- coding: UTF-8 -*-\nimport sys\n\nprint "xxl-job: hello python"\n\nprint "' + loc + '：", sys.argv[0]\nprint "' + p + '：", sys.argv[1]\nprint "' + idx + '：", sys.argv[2]\nprint "' + tot + '：", sys.argv[3]\n\nprint "Good bye!"\nexit(0)';
+			} else if (gt == 'GLUE_PHP') {
+				return '<?php\n\n    echo "xxl-job: hello php  \\n";\n\n    echo "' + loc + '：$argv[0]  \\n";\n    echo "' + p + '：$argv[1]  \\n";\n    echo "' + idx + ' = $argv[2]  \\n";\n    echo "' + tot + ' = $argv[3]  \\n";\n\n    echo "Good bye!  \\n";\n    exit(0);\n\n?>';
+			} else if (gt == 'GLUE_NODEJS') {
+				return '#!/usr/bin/env node\nconsole.log("xxl-job: hello nodejs")\n\nvar arguments = process.argv\n\nconsole.log("' + loc + ': " + arguments[1])\nconsole.log("' + p + ': " + arguments[2])\nconsole.log("' + idx + ': " + arguments[3])\nconsole.log("' + tot + ': " + arguments[4])\n\nconsole.log("Good bye!")\nprocess.exit(0)';
+			} else if (gt == 'GLUE_POWERSHELL') {
+				return 'Write-Host "xxl-job: hello powershell"\n\nWrite-Host "' + loc + ': " $MyInvocation.MyCommand.Definition\nWrite-Host "' + p + ': "\n\tif ($args.Count -gt 2) { $args[0..($args.Count-3)] }\nWrite-Host "' + idx + ': " $args[$args.Count-2]\nWrite-Host "' + tot + ': " $args[$args.Count-1]\n\nWrite-Host "Good bye!"\nexit 0';
+			}
+			return '';
+		},
+
+		// -------------------- 通用 POST（表单编码，Spring 直接绑定） --------------------
+		post: function (url, data, cb) {
+			var that = this;
+			$.ajax({
+				type: 'POST', url: url, data: data, dataType: 'json',
+				success: cb,
+				error: function (xhr) { that.$message.error('${I18n.system_fail}' + (xhr && xhr.status ? (' [' + xhr.status + ']') : '')); }
+			});
+		}
+	}
+});
+</script>
+</body>
+</html>

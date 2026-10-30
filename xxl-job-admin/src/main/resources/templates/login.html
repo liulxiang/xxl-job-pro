@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  	<#import "./common/macro.html" as netCommon>
+	<@netCommon.commonStyle />
+	<title>${I18n.admin_name}</title>
+	<style type="text/css">
+		[v-cloak] { display: none; }
+		#login-app .login-box-body { padding: 20px 30px 30px; }
+		#login-app .login-box-msg { margin-bottom: 20px; }
+		#login-app .el-form-item { margin-bottom: 18px; }
+	</style>
+</head>
+<body class="hold-transition login-page">
+	<div id="login-app" class="login-box" v-cloak>
+		<div class="login-logo">
+			<a><b>XXL</b>JOB</a>
+		</div>
+		<div class="login-box-body">
+			<p class="login-box-msg">${I18n.admin_name}</p>
+			<el-form :model="loginForm" :rules="loginRule" ref="loginForm" size="small" @submit.native.prevent>
+				<el-form-item prop="userName">
+					<el-input v-model="loginForm.userName" prefix-icon="el-icon-user" maxlength="20" placeholder="${I18n.login_username_placeholder}"></el-input>
+				</el-form-item>
+				<el-form-item prop="password">
+					<el-input v-model="loginForm.password" type="password" prefix-icon="el-icon-lock" maxlength="20" placeholder="${I18n.login_password_placeholder}" @keyup.enter.native="doLogin"></el-input>
+				</el-form-item>
+				<el-row>
+					<el-col :span="14">
+						<el-checkbox v-model="loginForm.ifRemember">${I18n.login_remember_me}</el-checkbox>
+					</el-col>
+					<el-col :span="10">
+						<el-button type="primary" style="width:100%;" @click="doLogin">${I18n.login_btn}</el-button>
+					</el-col>
+				</el-row>
+			</el-form>
+		</div>
+	</div>
+<@netCommon.commonScript />
+<script type="text/javascript">
+new Vue({
+	el: '#login-app',
+	data: {
+		loginForm: { userName: '', password: '', ifRemember: false },
+		loginRule: {
+			userName: [
+				{ required: true, message: '${I18n.login_username_empty}', trigger: 'blur' },
+				{ min: 4, max: 20, message: '${I18n.login_username_lt_4}', trigger: 'blur' }
+			],
+			password: [
+				{ required: true, message: '${I18n.login_password_empty}', trigger: 'blur' },
+				{ min: 4, max: 20, message: '${I18n.login_password_lt_4}', trigger: 'blur' }
+			]
+		}
+	},
+	methods: {
+		doLogin: function () {
+			var that = this;
+			this.$refs.loginForm.validate(function (valid) {
+				if (!valid) { return; }
+				$.ajax({
+					type: 'POST',
+					url: base_url + '/login',
+					data: {
+						userName: that.loginForm.userName,
+						password: that.loginForm.password,
+						ifRemember: that.loginForm.ifRemember ? 'on' : ''
+					},
+					dataType: 'json',
+					success: function (res) {
+						if (res.code == 200) {
+							that.$message.success('${I18n.login_success}');
+							setTimeout(function () { window.location.href = base_url + '/'; }, 500);
+						} else {
+							that.$message.error(res.msg || '${I18n.login_fail}');
+						}
+					},
+					error: function (xhr) { that.$message.error('${I18n.login_fail}' + (xhr && xhr.status ? (' [' + xhr.status + ']') : '')); }
+				});
+			});
+		}
+	}
+});
+</script>
+</body>
+</html>

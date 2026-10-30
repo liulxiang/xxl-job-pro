@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html>
+<head>
+  	<#import "../common/macro.html" as netCommon>
+	<@netCommon.commonStyle />
+	<title>${I18n.admin_name}</title>
+	<style type="text/css">
+		[v-cloak] { display: none; }
+		#joblog-app .query-block { margin-bottom: 12px; }
+		#joblog-app .el-form .el-select, #joblog-app .el-form .el-input { width: 100%; }
+		#joblog-app .msg-cell { white-space: pre-wrap; word-wrap: break-word; text-align: left; }
+	</style>
+</head>
+<body class="hold-transition skin-blue sidebar-mini <#if cookieMap?exists && cookieMap["xxljob_adminlte_settings"]?exists && "off" == cookieMap["xxljob_adminlte_settings"].value >sidebar-collapse</#if>">
+<div class="wrapper">
+	<!-- header -->
+	<@netCommon.commonHeader />
+	<!-- left -->
+	<@netCommon.commonLeft "joblog" />
+
+	<!-- Content Wrapper -->
+	<div class="content-wrapper">
+		<section class="content-header">
+			<h1>${I18n.joblog_name}</h1>
+		</section>
+
+		<section class="content">
+			<div id="joblog-app" v-cloak>
+
+				<#-- 查询区 -->
+				<div class="query-block">
+					<el-form :inline="true" size="mini">
+						<el-form-item>
+							<el-select v-model="queryParams.jobGroup" @change="handleJobGroupChange">
+								<el-option v-if="isAdmin" :value="0" label="${I18n.system_all}"></el-option>
+								<el-option v-for="g in jobGroupList" :key="g.id" :label="g.title" :value="g.id"></el-option>
+							</el-select>
+						</el-form-item>
+						<el-form-item>
+							<el-select v-model="queryParams.jobId" filterable @change="handleQuery">
+								<el-option :value="0" label="${I18n.system_all}"></el-option>
+								<el-option v-for="j in jobList" :key="j.id" :label="j.jobDesc" :value="j.id"></el-option>
+							</el-select>
+						</el-form-item>
+						<el-form-item>
+							<el-select v-model="queryParams.logStatus" @change="handleQuery">
+								<el-option :value="-1" label="${I18n.joblog_status_all}"></el-option>
+								<el-option :value="1" label="${I18n.joblog_status_suc}"></el-option>
+								<el-option :value="2" label="${I18n.joblog_status_fail}"></el-option>
+								<el-option :value="3" label="${I18n.joblog_status_running}"></el-option>
+							</el-select>
+						</el-form-item>
+						<el-form-item>
+							<el-date-picker
+								v-model="filterRange"
+								type="datetimerange"
+								range-separator="-"
+								value-format="yyyy-MM-dd HH:mm:ss"
+								@change="handleQuery">
+							</el-date-picker>
+						</el-form-item>
+						<el-form-item>
+							<el-button type="primary" icon="el-icon-search" @click="handleQuery">${I18n.system_search}</el-button>
+							<el-button icon="el-icon-delete" @click="openClearLog">${I18n.joblog_clean}</el-button>
+						</el-form-item>
+					</el-form>
+
+					<el-table :data="dataList" v-loading="dataListLoading" border stripe size="mini" style="width:100%">
+						<el-table-column label="${I18n.jobinfo_field_id}" width="70" header-align="center" align="center">
+							<template slot-scope="scope">
+								<el-button type="text" @click="showJobTips(scope.row)">{{ scope.row.jobId }}</el-button>
+							</template>
+						</el-table-column>
+						<el-table-column prop="jobDesc" label="${I18n.jobinfo_field_jobdesc}" header-align="center" align="center" show-overflow-tooltip></el-table-column>
+						<el-table-column label="${I18n.joblog_field_triggerTime}" width="150" header-align="center" align="center">
+							<template slot-scope="scope">{{ fmtTime(scope.row.triggerTime) }}</template>
+						</el-table-column>
+						<el-table-column label="${I18n.joblog_field_triggerCode}" width="80" header-align="center" align="center">
+							<template slot-scope="scope">
+								<span v-if="scope.row.triggerCode==200" style="color:green">${I18n.system_success}</span>
+								<span v-else-if="scope.row.triggerCode==500" style="color:red">${I18n.system_fail}</span>
+							</template>
+						</el-table-column>
+						<el-table-column label="${I18n.joblog_field_triggerMsg}" width="80" header-align="center" align="center">
+							<template slot-scope="scope">
+								<el-button v-if="scope.row.triggerMsg" type="text" @click="showMsg('${I18n.joblog_field_triggerMsg}', scope.row.triggerMsg)">${I18n.system_show}</el-button>
+								<span v-else style="color:#909399">${I18n.system_empty}</span>
+							</template>
+						</el-table-column>
+						<el-table-column label="${I18n.joblog_field_handleTime}" width="150" header-align="center" align="center">
+							<template slot-scope="scope">{{ fmtTime(scope.row.handleTime) }}</template>
+						</el-table-column>
+						<el-table-column label="${I18n.joblog_field_handleCode}" width="80" header-align="center" align="center">
+							<template slot-scope="scope">
+								<span v-if="scope.row.handleCode==200" style="color:green">${I18n.joblog_handleCode_200}</span>
+								<span v-else-if="scope.row.handleCode==500" style="color:red">${I18n.joblog_handleCode_500}</span>
+								<span v-else-if="scope.row.handleCode==502" style="color:red">${I18n.joblog_handleCode_502}</span>
+							</template>
+						</el-table-column>
+						<el-table-column label="${I18n.joblog_field_handleMsg}" width="80" header-align="center" align="center">
+							<template slot-scope="scope">
+								<el-button v-if="scope.row.handleMsg" type="text" @click="showMsg('${I18n.joblog_field_handleMsg}', scope.row.handleMsg)">${I18n.system_show}</el-button>
+								<span v-else style="color:#909399">${I18n.system_empty}</span>
+							</template>
+						</el-table-column>
+						<el-table-column label="${I18n.system_opt}" width="100" header-align="center" align="center">
+							<template slot-scope="scope">
+								<el-dropdown v-if="scope.row.triggerCode==200 || scope.row.handleCode!=0" trigger="click" @command="handleCommand($event, scope.row)">
+									<el-button type="primary" size="mini">${I18n.system_opt}<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+									<el-dropdown-menu slot="dropdown">
+										<el-dropdown-item command="detail">${I18n.joblog_rolling_log}</el-dropdown-item>
+										<el-dropdown-item command="kill" v-if="scope.row.handleCode==0" style="color:red">${I18n.joblog_kill_log}</el-dropdown-item>
+									</el-dropdown-menu>
+								</el-dropdown>
+							</template>
+						</el-table-column>
+					</el-table>
+
+					<el-pagination
+						background
+						layout="total, sizes, prev, pager, next"
+						:total="total"
+						:current-page="queryParams.page"
+						:page-size="queryParams.rows"
+						:page-sizes="[10, 20, 50, 100]"
+						@size-change="sizeChangeHandle"
+						@current-change="currentChangeHandle"
+						style="margin-top:16px;text-align:center;">
+					</el-pagination>
+				</div>
+
+				<#-- 信息查看 弹窗（任务提示 / 调度或执行信息） -->
+				<el-dialog :title="infoTitle" :visible.sync="infoDialogVisible" :append-to-body="true" width="640px">
+					<div class="msg-cell" v-text="infoText"></div>
+					<span slot="footer">
+						<el-button type="primary" @click="infoDialogVisible=false">${I18n.system_ok}</el-button>
+					</span>
+				</el-dialog>
+
+				<#-- 日志清理 弹窗 -->
+				<el-dialog title="${I18n.joblog_clean_log}" :visible.sync="clearDialogVisible" :append-to-body="true" width="520px" :close-on-click-modal="false">
+					<el-form label-width="110px" size="small">
+						<el-form-item label="${I18n.jobinfo_field_jobgroup}">
+							<el-input :value="clearForm.jobGroupText" readonly></el-input>
+						</el-form-item>
+						<el-form-item label="${I18n.jobinfo_job}">
+							<el-input :value="clearForm.jobIdText" readonly></el-input>
+						</el-form-item>
+						<el-form-item label="${I18n.joblog_clean_type}">
+							<el-select v-model="clearForm.type">
+								<el-option :value="1" label="${I18n.joblog_clean_type_1}"></el-option>
+								<el-option :value="2" label="${I18n.joblog_clean_type_2}"></el-option>
+								<el-option :value="3" label="${I18n.joblog_clean_type_3}"></el-option>
+								<el-option :value="4" label="${I18n.joblog_clean_type_4}"></el-option>
+								<el-option :value="5" label="${I18n.joblog_clean_type_5}"></el-option>
+								<el-option :value="6" label="${I18n.joblog_clean_type_6}"></el-option>
+								<el-option :value="7" label="${I18n.joblog_clean_type_7}"></el-option>
+								<el-option :value="8" label="${I18n.joblog_clean_type_8}"></el-option>
+								<el-option :value="9" label="${I18n.joblog_clean_type_9}"></el-option>
+							</el-select>
+						</el-form-item>
+					</el-form>
+					<span slot="footer">
+						<el-button @click="clearDialogVisible=false">${I18n.system_cancel}</el-button>
+						<el-button type="primary" @click="doClearLog">${I18n.system_ok}</el-button>
+					</span>
+				</el-dialog>
+
+			</div>
+		</section>
+	</div>
+
+	<!-- footer -->
+	<@netCommon.commonFooter />
+</div>
+
+<@netCommon.commonScript />
+<script type="text/javascript">
+new Vue({
+	el: '#joblog-app',
+	data: {
+		isAdmin: false,
+		jobGroupList: [],
+		jobList: [],
+		dataList: [],
+		dataListLoading: false,
+		total: 0,
+		queryParams: {
+			jobGroup: 0,
+			jobId: 0,
+			logStatus: -1,
+			page: 1,
+			rows: 10
+		},
+		defaultJobId: 0,
+		filterRange: (function () {
+			// 默认当天
+			var s = new Date(); s.setHours(0,0,0,0);
+			var e = new Date(); e.setHours(23,59,59,0);
+			return [ fmt(s), fmt(e) ];
+		})(),
+
+		infoDialogVisible: false,
+		infoTitle: '',
+		infoText: '',
+
+		clearDialogVisible: false,
+		clearForm: { jobGroup: 0, jobId: 0, jobGroupText: '', jobIdText: '', type: 1 }
+	},
+	created: function () {
+		this.initData();
+	},
+	methods: {
+		initData: function () {
+			var that = this;
+			var m = /[?&]jobId=([^&]+)/.exec(window.location.search);
+			$.ajax({
+				type: 'GET',
+				url: base_url + '/joblog/initData',
+				data: m ? { jobId: m[1] } : {},
+				dataType: 'json',
+				success: function (res) {
+					if (res.code != 200) { that.$message.error(res.msg || '${I18n.system_fail}'); return; }
+					var c = res.content;
+					that.isAdmin = c.isAdmin;
+					that.jobGroupList = c.jobGroupList || [];
+					that.queryParams.jobGroup = c.defaultJobGroup;
+					that.defaultJobId = c.defaultJobId || 0;
+					// 加载该执行器下的任务，再拉取日志
+					that.loadJobs(that.queryParams.jobGroup, function () {
+						that.getDataList();
+					});
+				}
+			});
+		},
+		// 加载执行器下的任务列表（jobGroup=0/全部时仅保留“全部”）
+		loadJobs: function (jobGroup, cb) {
+			var that = this;
+			this.jobList = [];
+			if (!(jobGroup > 0)) { that.queryParams.jobId = 0; if (cb) { cb(); } return; }
+			$.ajax({
+				type: 'POST',
+				url: base_url + '/joblog/getJobsByGroup',
+				data: { jobGroup: jobGroup },
+				dataType: 'json',
+				success: function (res) {
+					if (res.code == 200) {
+						that.jobList = res.content || [];
+						// 默认选中任务（进入自某任务日志页时）
+						if (that.defaultJobId > 0 && that.jobList.some(function (j) { return j.id == that.defaultJobId; })) {
+							that.queryParams.jobId = that.defaultJobId;
+						} else {
+							that.queryParams.jobId = 0;
+						}
+						that.defaultJobId = 0;   // 仅初始化时使用一次
+					}
+					if (cb) { cb(); }
+				},
+				error: function () { if (cb) { cb(); } }
+			});
+		},
+		handleJobGroupChange: function () {
+			this.queryParams.jobId = 0;
+			this.defaultJobId = 0;
+			var that = this;
+			this.loadJobs(this.queryParams.jobGroup, function () { that.queryParams.page = 1; that.getDataList(); });
+		},
+
+		handleQuery: function () { this.queryParams.page = 1; this.getDataList(); },
+		getDataList: function () {
+			var that = this;
+			this.dataListLoading = true;
+			var filterTime = (this.filterRange && this.filterRange.length == 2) ? (this.filterRange[0] + ' - ' + this.filterRange[1]) : '';
+			$.ajax({
+				type: 'POST',
+				url: base_url + '/joblog/pageList',
+				data: {
+					start: (this.queryParams.page - 1) * this.queryParams.rows,
+					length: this.queryParams.rows,
+					jobGroup: this.queryParams.jobGroup,
+					jobId: this.queryParams.jobId,
+					logStatus: this.queryParams.logStatus,
+					filterTime: filterTime
+				},
+				dataType: 'json',
+				success: function (res) {
+					that.dataListLoading = false;
+					if (res.code && res.code != 200) { that.$message.error(res.msg || '${I18n.system_fail}'); return; }
+					that.dataList = res.data || [];
+					that.total = parseInt(res.recordsTotal || 0);
+				},
+				error: function () { that.dataListLoading = false; that.$message.error('${I18n.system_fail}'); }
+			});
+		},
+		sizeChangeHandle: function (val) { this.queryParams.rows = val; this.queryParams.page = 1; this.getDataList(); },
+		currentChangeHandle: function (val) { this.queryParams.page = val; this.getDataList(); },
+
+		fmtTime: function (t) {
+			if (!t) { return ''; }
+			return fmt(new Date(t));
+		},
+
+		showJobTips: function (row) {
+			var txt = '${I18n.joblog_field_executorAddress}：' + (row.executorAddress || '') + '\n'
+				+ (row.executorHandler ? ('JobHandler：' + row.executorHandler + '\n') : '')
+				+ '${I18n.jobinfo_field_executorparam}：' + (row.executorParam || '');
+			this.infoTitle = 'jobId:' + row.jobId;
+			this.infoText = txt;
+			this.infoDialogVisible = true;
+		},
+		showMsg: function (title, msg) {
+			this.infoTitle = title;
+			this.infoText = msg;
+			this.infoDialogVisible = true;
+		},
+
+		handleCommand: function (cmd, row) {
+			if (cmd == 'detail') { window.open(base_url + '/joblog/logDetailPage?id=' + row.id); }
+			else if (cmd == 'kill') { this.logKill(row); }
+		},
+		logKill: function (row) {
+			var that = this;
+			this.$confirm('${I18n.system_ok}${I18n.joblog_kill_log}?', '${I18n.system_tips}', {
+				confirmButtonText: '${I18n.system_ok}', cancelButtonText: '${I18n.system_cancel}', type: 'warning'
+			}).then(function () {
+				that.post(base_url + '/joblog/logKill', { id: row.id }, function (res) {
+					if (res.code == 200) { that.$message.success('${I18n.system_opt_suc}'); that.getDataList(); }
+					else { that.$message.error(res.msg || '${I18n.system_opt_fail}'); }
+				});
+			}).catch(function () {});
+		},
+
+		openClearLog: function () {
+			var gText;
+			if (this.queryParams.jobGroup == 0) {
+				gText = '${I18n.system_all}';
+			} else {
+				var g = this.jobGroupList.find(function (x) { return x.id == this.queryParams.jobGroup; }.bind(this));
+				gText = g ? g.title : '';
+			}
+			var jText;
+			if (this.queryParams.jobId == 0) {
+				jText = '${I18n.system_all}';
+			} else {
+				var j = this.jobList.find(function (x) { return x.id == this.queryParams.jobId; }.bind(this));
+				jText = j ? j.jobDesc : '';
+			}
+			this.clearForm = {
+				jobGroup: this.queryParams.jobGroup, jobId: this.queryParams.jobId,
+				jobGroupText: gText, jobIdText: jText, type: 1
+			};
+			this.clearDialogVisible = true;
+		},
+		doClearLog: function () {
+			var that = this;
+			this.post(base_url + '/joblog/clearLog', { jobGroup: this.clearForm.jobGroup, jobId: this.clearForm.jobId, type: this.clearForm.type }, function (res) {
+				if (res.code == 200) {
+					that.clearDialogVisible = false;
+					that.$message.success('${I18n.joblog_clean_log}${I18n.system_success}');
+					that.getDataList();
+				} else {
+					that.$message.error(res.msg || '${I18n.joblog_clean_log}${I18n.system_fail}');
+				}
+			});
+		},
+
+		post: function (url, data, cb) {
+			var that = this;
+			$.ajax({
+				type: 'POST', url: url, data: data, dataType: 'json',
+				success: cb,
+				error: function (xhr) { that.$message.error('${I18n.system_fail}' + (xhr && xhr.status ? (' [' + xhr.status + ']') : '')); }
+			});
+		}
+	}
+});
+
+// 时间格式化：yyyy-MM-dd HH:mm:ss
+function fmt(d) {
+	function p(n) { return n < 10 ? ('0' + n) : ('' + n); }
+	return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+}
+</script>
+</body>
+</html>

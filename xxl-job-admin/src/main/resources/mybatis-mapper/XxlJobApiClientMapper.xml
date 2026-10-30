@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xxl.job.admin.dao.XxlJobApiClientDao">
+
+	<resultMap id="XxlJobApiClient" type="com.xxl.job.admin.core.model.XxlJobApiClient" >
+		<result column="id" property="id" />
+		<result column="app_key" property="appKey" />
+	    <result column="app_secret" property="appSecret" />
+	    <result column="username" property="username" />
+	    <result column="callback_url" property="callbackUrl" />
+	    <result column="status" property="status" />
+	    <result column="remark" property="remark" />
+	    <result column="add_time" property="addTime" />
+	    <result column="update_time" property="updateTime" />
+	</resultMap>
+
+	<sql id="Base_Column_List">
+		t.id,
+		t.app_key,
+		t.app_secret,
+		t.username,
+		t.callback_url,
+		t.status,
+		t.remark,
+		t.add_time,
+		t.update_time
+	</sql>
+
+	<select id="pageList" parameterType="java.util.HashMap" resultMap="XxlJobApiClient">
+		SELECT <include refid="Base_Column_List" />
+		FROM xxl_job_api_client AS t
+		<trim prefix="WHERE" prefixOverrides="AND | OR" >
+			<if test="appKey != null and appKey != ''">
+				AND t.app_key like CONCAT(CONCAT('%', #{appKey}), '%')
+			</if>
+		</trim>
+		ORDER BY t.id DESC
+		LIMIT #{offset}, #{pagesize}
+	</select>
+
+	<select id="pageListCount" parameterType="java.util.HashMap" resultType="int">
+		SELECT count(1)
+		FROM xxl_job_api_client AS t
+		<trim prefix="WHERE" prefixOverrides="AND | OR" >
+			<if test="appKey != null and appKey != ''">
+				AND t.app_key like CONCAT(CONCAT('%', #{appKey}), '%')
+			</if>
+		</trim>
+	</select>
+
+	<select id="loadByAppKey" parameterType="java.util.HashMap" resultMap="XxlJobApiClient">
+		SELECT <include refid="Base_Column_List" />
+		FROM xxl_job_api_client AS t
+		WHERE t.app_key = #{appKey}
+		AND t.status = 1
+	</select>
+
+	<select id="loadById" parameterType="java.util.HashMap" resultMap="XxlJobApiClient">
+		SELECT <include refid="Base_Column_List" />
+		FROM xxl_job_api_client AS t
+		WHERE t.id = #{id}
+	</select>
+
+	<insert id="save" parameterType="com.xxl.job.admin.core.model.XxlJobApiClient" useGeneratedKeys="true" keyProperty="id" >
+		INSERT INTO xxl_job_api_client (
+			app_key,
+			app_secret,
+			username,
+			callback_url,
+			status,
+			remark,
+			add_time,
+			update_time
+		) VALUES (
+			#{appKey},
+			#{appSecret},
+			#{username},
+			#{callbackUrl},
+			#{status},
+			#{remark},
+			#{addTime},
+			#{updateTime}
+		);
+	</insert>
+
+	<update id="update" parameterType="com.xxl.job.admin.core.model.XxlJobApiClient" >
+		UPDATE xxl_job_api_client
+		SET
+			app_secret = #{appSecret},
+			username = #{username},
+			callback_url = #{callbackUrl},
+			status = #{status},
+			remark = #{remark},
+			update_time = #{updateTime}
+		WHERE id = #{id}
+	</update>
+
+	<delete id="delete" parameterType="java.util.HashMap">
+		DELETE
+		FROM xxl_job_api_client
+		WHERE id = #{id}
+	</delete>
+
+</mapper>

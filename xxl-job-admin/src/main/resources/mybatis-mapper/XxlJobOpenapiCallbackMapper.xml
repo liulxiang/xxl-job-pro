@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xxl.job.admin.dao.XxlJobOpenapiCallbackDao">
+
+	<resultMap id="XxlJobOpenapiCallback" type="com.xxl.job.admin.core.model.XxlJobOpenapiCallback" >
+		<result column="id" property="id" />
+		<result column="log_id" property="logId" />
+	    <result column="app_key" property="appKey" />
+	    <result column="webhook_url" property="webhookUrl" />
+	    <result column="status" property="status" />
+	    <result column="retry_count" property="retryCount" />
+	    <result column="next_retry_time" property="nextRetryTime" />
+	    <result column="add_time" property="addTime" />
+	</resultMap>
+
+	<sql id="Base_Column_List">
+		t.id,
+		t.log_id,
+		t.app_key,
+		t.webhook_url,
+		t.status,
+		t.retry_count,
+		t.next_retry_time,
+		t.add_time
+	</sql>
+
+	<insert id="save" parameterType="com.xxl.job.admin.core.model.XxlJobOpenapiCallback" useGeneratedKeys="true" keyProperty="id" >
+		INSERT INTO xxl_job_openapi_callback (
+			log_id,
+			app_key,
+			webhook_url,
+			status,
+			retry_count,
+			next_retry_time,
+			add_time
+		) VALUES (
+			#{logId},
+			#{appKey},
+			#{webhookUrl},
+			#{status},
+			#{retryCount},
+			#{nextRetryTime},
+			#{addTime}
+		)
+		ON DUPLICATE KEY UPDATE
+			app_key = #{appKey},
+			webhook_url = #{webhookUrl},
+			status = #{status},
+			retry_count = #{retryCount},
+			next_retry_time = #{nextRetryTime},
+			add_time = #{addTime};
+	</insert>
+
+	<select id="loadByLogId" parameterType="java.util.HashMap" resultMap="XxlJobOpenapiCallback">
+		SELECT <include refid="Base_Column_List" />
+		FROM xxl_job_openapi_callback AS t
+		WHERE t.log_id = #{logId}
+	</select>
+
+	<select id="findPending" parameterType="java.util.HashMap" resultMap="XxlJobOpenapiCallback">
+		SELECT <include refid="Base_Column_List" />
+		FROM xxl_job_openapi_callback AS t
+		WHERE t.status = 0
+		AND t.next_retry_time &lt;= #{now}
+		AND t.retry_count &lt; #{maxRetry}
+		ORDER BY t.next_retry_time ASC
+		LIMIT #{pagesize}
+	</select>
+
+	<update id="updateStatus" parameterType="java.util.HashMap">
+		UPDATE xxl_job_openapi_callback
+		SET status = #{newStatus}
+		WHERE log_id = #{logId}
+		AND status = #{oldStatus}
+	</update>
+
+	<update id="claim" parameterType="java.util.HashMap">
+		UPDATE xxl_job_openapi_callback
+		SET retry_count = retry_count + 1,
+			next_retry_time = #{newNextRetryTime}
+		WHERE log_id = #{logId}
+		AND status = 0
+		AND next_retry_time = #{oldNextRetryTime}
+	</update>
+
+	<update id="deferNext" parameterType="java.util.HashMap">
+		UPDATE xxl_job_openapi_callback
+		SET next_retry_time = #{nextRetryTime}
+		WHERE log_id = #{logId}
+		AND status = 0
+	</update>
+
+</mapper>

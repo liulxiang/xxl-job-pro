@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+  	<#import "../common/macro.html" as netCommon>
+	<@netCommon.commonStyle />
+	<link rel="stylesheet" href="${request.contextPath}/static/plugins/codemirror/lib/codemirror.css">
+	<link rel="stylesheet" href="${request.contextPath}/static/plugins/codemirror/addon/hint/show-hint.css">
+    <title>${I18n.admin_name}</title>
+	<style type="text/css">
+		[v-cloak] { display: none; }
+		.CodeMirror {
+			font-size:16px;
+			width: 100%;
+			height: 100%;
+			position: absolute;
+		}
+		#jobcode-app .navbar-brand { line-height: 30px; }
+	</style>
+</head>
+<body class="skin-blue fixed layout-top-nav">
+
+<div class="wrapper">
+
+	<header class="main-header">
+		<nav class="navbar navbar-static-top">
+			<div class="container">
+				<div class="navbar-header">
+					<a class="navbar-brand"><b>Web</b>IDE</a>
+				</div>
+			</div>
+		</nav>
+	</header>
+
+	<div id="jobcode-app" class="content-wrapper" v-cloak>
+
+		<#-- 顶部工具条 -->
+		<div style="padding:8px 15px;background:#f5f5f5;border-bottom:1px solid #e5e5e5;">
+			<el-row type="flex" justify="space-between" align="middle">
+				<el-col :span="16">
+					<span style="font-weight:bold;">【{{ glueTypeDesc }}】{{ jobInfo.jobDesc }}</span>
+				</el-col>
+				<el-col :span="8" style="text-align:right;">
+					<el-dropdown trigger="click" @command="loadVersion">
+						<el-button size="mini">${I18n.jobinfo_glue_rollback}<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+						<el-dropdown-menu slot="dropdown">
+							<el-dropdown-item v-for="v in versionList" :key="v.version" :command="v.version">
+								{{ descOf(v.glueType) }}：{{ v.glueRemark }}
+							</el-dropdown-item>
+						</el-dropdown-menu>
+					</el-dropdown>
+					<el-button size="mini" type="primary" icon="el-icon-document-checked" @click="openSave">${I18n.system_save}</el-button>
+					<el-button size="mini" icon="el-icon-close" @click="closeWin">${I18n.system_close}</el-button>
+				</el-col>
+			</el-row>
+		</div>
+
+		<#-- 编辑区 -->
+		<div ref="ideWindow" style="position:absolute;top:96px;bottom:0;left:0;right:0;"></div>
+
+		<#-- 保存弹窗 -->
+		<el-dialog title="${I18n.system_save}" :visible.sync="saveDialogVisible" :append-to-body="true" width="480px" :close-on-click-modal="false">
+			<el-form label-width="90px" size="small">
+				<el-form-item label="${I18n.jobinfo_glue_remark}">
+					<el-input v-model="glueRemark" maxlength="100" placeholder="${I18n.system_please_input}${I18n.jobinfo_glue_remark}"></el-input>
+				</el-form-item>
+			</el-form>
+			<span slot="footer">
+				<el-button @click="saveDialogVisible=false">${I18n.system_cancel}</el-button>
+				<el-button type="primary" @click="doSave">${I18n.system_save}</el-button>
+			</span>
+		</el-dialog>
+
+	</div>
+
+</div>
+
+<@netCommon.commonScript />
+
+<!-- CodeMirror core + modes（前端按 glueType 选择语言模式） -->
+<script src="${request.contextPath}/static/plugins/codemirror/lib/codemirror.js"></script>
+<script src="${request.contextPath}/static/plugins/codemirror/mode/clike/clike.js"></script>
+<script src="${request.contextPath}/static/plugins/codemirror/mode/shell/shell.js"></script>
+<script src="${request.contextPath}/static/plugins/codemirror/mode/python/python.js"></script>
+<script src="${request.contextPath}/static/plugins/codemirror/mode/javascript/javascript.js"></script>
+<script src="${request.contextPath}/static/plugins/codemirror/mode/php/php.js"></script>
+<script src="${request.contextPath}/static/plugins/codemirror/mode/powershell/powershell.js"></script>
+<script src="${request.contextPath}/static/plugins/codemirror/addon/hint/show-hint.js"></script>
+<script src="${request.contextPath}/static/plugins/codemirror/addon/hint/anyword-hint.js"></script>
+
+<script type="text/javascript">
+var IDE_MODE = {
+	'GLUE_GROOVY': 'text/x-java',
+	'GLUE_SHELL': 'text/x-sh',
+	'GLUE_PYTHON': 'text/x-python',
+	'GLUE_PHP': 'text/x-php',
+	'GLUE_NODEJS': 'text/javascript',
+	'GLUE_POWERSHELL': 'powershell'
+};
+
+var jobcodeApp = new Vue({
+	el: '#jobcode-app',
+	data: {
+		jobId: (function () { var m = /[?&]jobId=([^&]+)/.exec(window.location.search); return m ? m[1] : ''; })(),
+		jobInfo: {},
+		versionList: [],
+		glueTypeList: [],
+		ideMode: 'text/x-java',
+		glueRemark: '',
+		saveDialogVisible: false
+	},
+	computed: {
+		glueTypeDesc: function () { return this.descOf(this.jobInfo.glueType); }
+	},
+	created: function () {
+		this.initData();
+	},
+	methods: {
+		initData: function () {
+			var that = this;
+			$.ajax({
+				type: 'GET',
+				url: base_url + '/jobcode/initData',
+				data: { jobId: this.jobId },
+				dataType: 'json',
+				success: function (res) {
+					if (res.code != 200) { that.$message.error(res.msg || '${I18n.system_fail}'); return; }
+					that.jobInfo = res.content.jobInfo || {};
+					that.versionList = res.content.versionList || [];
+					that.glueTypeList = res.content.glueTypeList || [];
+					that.ideMode = IDE_MODE[that.jobInfo.glueType] || 'text/x-java';
+					var first = that.versionList.length > 0 ? that.versionList[0].glueSource : '';
+					that.$nextTick(function () { that.initIde(first); });
+				}
+			});
+		},
+		descOf: function (name) {
+			if (!name) { return ''; }
+			var g = this.glueTypeList.find(function (x) { return x.name == name; });
+			return g ? g.title : name;
+		},
+		initIde: function (glueSource) {
+			var el = this.$refs.ideWindow;
+			if (!el) { return; }
+			if (!this.codeEditor) {
+				this.codeEditor = CodeMirror(el, {
+					mode: this.ideMode,
+					lineNumbers: true,
+					matchBrackets: true,
+					value: glueSource || ''
+				});
+			} else {
+				this.codeEditor.setValue(glueSource || '');
+			}
+		},
+		loadVersion: function (version) {
+			var v = this.versionList.find(function (x) { return x.version == version; });
+			if (v) { this.initIde(v.glueSource); }
+		},
+		openSave: function () {
+			this.glueRemark = '';
+			this.saveDialogVisible = true;
+		},
+		doSave: function () {
+			var that = this;
+			var remark = (this.glueRemark || '').trim();
+			if (!remark) { this.$message.error('${I18n.system_please_input}${I18n.jobinfo_glue_remark}'); return; }
+			if (remark.length < 4 || remark.length > 100) { this.$message.error('${I18n.jobinfo_glue_remark_limit}'); return; }
+			$.ajax({
+				type: 'POST',
+				url: base_url + '/jobcode/save',
+				data: { id: this.jobInfo.id, glueSource: this.codeEditor ? this.codeEditor.getValue() : '', glueRemark: remark },
+				dataType: 'json',
+				success: function (res) {
+					if (res.code == 200) {
+						that.saveDialogVisible = false;
+						that.$message.success('${I18n.system_save}${I18n.system_success}');
+						setTimeout(function () { window.location.reload(); }, 600);
+					} else {
+						that.$message.error(res.msg || '${I18n.system_save}${I18n.system_fail}');
+					}
+				},
+				error: function (xhr) { that.$message.error('${I18n.system_fail}' + (xhr && xhr.status ? (' [' + xhr.status + ']') : '')); }
+			});
+		},
+		closeWin: function () { window.close(); }
+	}
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <#import "../common/macro.html" as netCommon>
+    <@netCommon.commonStyle />
+    <title>${I18n.admin_name}</title>
+    <style type="text/css">
+        [v-cloak] { display: none; }
+        #logdetail-app pre { font-size:12px; position:relative; white-space: pre-wrap; word-wrap: break-word; }
+    </style>
+</head>
+<body class="hold-transition skin-blue layout-top-nav">
+
+<div class="wrapper">
+
+    <header class="main-header">
+        <nav class="navbar navbar-static-top">
+            <div class="container">
+                <div class="navbar-header">
+                    <a class="navbar-brand"><b>${I18n.joblog_rolling_log}</b> Console</a>
+                </div>
+                <div class="navbar-custom-menu">
+                    <ul class="nav navbar-nav">
+                        <li>
+                            <a href="javascript:window.location.reload();" >
+                                <i class="fa fa-fw fa-refresh" ></i>
+                                ${I18n.joblog_rolling_log_refresh}
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div id="logdetail-app" class="content-wrapper" v-cloak>
+        <section class="content">
+            <pre><div v-html="logHtml" style="display:inline;"></div><i v-if="running" class="fa fa-refresh fa-spin" style="font-size:20px;float:left;"></i></pre>
+        </section>
+    </div>
+
+    <!-- footer -->
+    <@netCommon.commonFooter />
+
+</div>
+
+<@netCommon.commonScript />
+<script type="text/javascript">
+new Vue({
+	el: '#logdetail-app',
+	data: {
+		logId: 0,
+		triggerCode: 0,
+		handleCode: 0,
+		logHtml: '',
+		running: true,
+		fromLineNum: 1,
+		pullFailCount: 0,
+		timer: null
+	},
+	mounted: function () {
+		this.initData();
+	},
+	beforeDestroy: function () {
+		this.stop(null);
+	},
+	methods: {
+		initData: function () {
+			var that = this;
+			var m = /[?&]id=([^&]+)/.exec(window.location.search);
+			var id = m ? m[1] : '';
+			$.ajax({
+				type: 'GET',
+				url: base_url + '/joblog/logDetailInitData',
+				data: { id: id },
+				dataType: 'json',
+				success: function (res) {
+					if (res.code != 200) { that.stop('<span style="color:red;">' + (res.msg || '${I18n.system_fail}') + '</span>'); return; }
+					that.logId = res.content.logId;
+					that.triggerCode = res.content.triggerCode;
+					that.handleCode = res.content.handleCode;
+
+					// trigger fail, end
+					if (!(that.triggerCode == 200 || that.handleCode != 0)) {
+						that.stop('<span style="color:red;">${I18n.joblog_rolling_log_triggerfail}</span>');
+						return;
+					}
+
+					// pull first page
+					that.pullLog();
+
+					// handler already callback, end
+					if (that.handleCode > 0) {
+						that.stop('<br><span style="color:green;">[Load Log Finish]</span>');
+						return;
+					}
+
+					// round until end
+					that.timer = setInterval(function () { that.pullLog(); }, 3000);
+				},
+				error: function () { that.stop('<span style="color:red;">${I18n.joblog_rolling_log_triggerfail}</span>'); }
+			});
+		},
+		pullLog: function () {
+			var that = this;
+			if (that.pullFailCount++ > 20) {
+				that.stop('<span style="color:red;">${I18n.joblog_rolling_log_failoften}</span>');
+				return;
+			}
+			$.ajax({
+				type: 'POST',
+				url: base_url + '/joblog/logDetailCat',
+				data: { logId: that.logId, fromLineNum: that.fromLineNum },
+				dataType: 'json',
+				success: function (res) {
+					if (res.code != 200 || !res.content) { return; }
+					var c = res.content;
+					if (that.fromLineNum != c.fromLineNum) { return; }
+					if (that.fromLineNum > c.toLineNum) {
+						if (c.end) { that.stop('<br><span style="color:green;">[Rolling Log Finish]</span>'); }
+						return;
+					}
+					that.fromLineNum = c.toLineNum + 1;
+					that.logHtml += c.logContent;
+					that.pullFailCount = 0;
+					that.$nextTick(function () { window.scrollTo(0, document.body.scrollHeight); });
+				},
+				error: function () {}
+			});
+		},
+		stop: function (content) {
+			this.running = false;
+			if (this.timer) { clearInterval(this.timer); this.timer = null; }
+			if (content) { this.logHtml += content; }
+		}
+	}
+});
+</script>
+
+</body>
+</html>

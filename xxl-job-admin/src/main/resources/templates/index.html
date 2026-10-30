@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html>
+<head>
+  	<#import "./common/macro.html" as netCommon>
+	<@netCommon.commonStyle />
+    <title>${I18n.admin_name}</title>
+    <style type="text/css">
+        [v-cloak] { display: none; }
+
+        /* ===== 布局：同一行内的卡片等高对齐 ===== */
+        #dashboard-app .el-row--flex { flex-wrap: wrap; }
+        #dashboard-app .el-row--flex > .el-col { display: flex; }
+        #dashboard-app .el-row--flex > .el-col > .el-card {
+            flex: 1 1 auto;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        #dashboard-app .stat-card > .el-card__body,
+        #dashboard-app .chart-card > .el-card__body { flex: 1 1 auto; }
+
+        /* ===== 统计卡片 ===== */
+        #dashboard-app .stat-card {
+            border: none;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .04);
+            transition: transform .25s ease, box-shadow .25s ease;
+        }
+        #dashboard-app .stat-card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(0, 0, 0, .1); }
+        #dashboard-app .stat-card > .el-card__body { display: flex; padding: 20px 22px; }
+        #dashboard-app .stat-body { display: flex; flex: 1 1 auto; min-width: 0; align-items: stretch; }
+        #dashboard-app .stat-icon {
+            align-self: center;
+            flex: 0 0 64px;
+            width: 64px; height: 64px; line-height: 64px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 28px; color: #fff;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, .14);
+        }
+        #dashboard-app .icon-job     { background: linear-gradient(135deg, #3361D1, #002E9E); }
+        #dashboard-app .icon-trigger { background: linear-gradient(135deg, #ffc247, #f0932b); }
+        #dashboard-app .icon-executor{ background: linear-gradient(135deg, #4fd8a4, #12a86b); }
+        #dashboard-app .stat-info { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; padding-left: 16px; }
+        #dashboard-app .stat-label { font-size: 13px; color: #909399; margin-bottom: 4px; }
+        #dashboard-app .stat-value {
+            font-size: 30px; font-weight: 600; line-height: 1.15; color: #303133;
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        }
+        #dashboard-app .stat-progress { margin-top: 10px; }
+        #dashboard-app .stat-progress .el-progress__text { font-size: 12px !important; color: #909399; }
+        /* 说明行统一贴底：三张卡片的说明文字始终落在同一水平线上 */
+        #dashboard-app .stat-tip {
+            margin-top: auto; padding-top: 6px;
+            font-size: 12px; color: #b1b3b8;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+
+        /* ===== 图表卡片 ===== */
+        #dashboard-app .chart-card {
+            border: none;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .04);
+        }
+        #dashboard-app .chart-card > .el-card__header { flex: none; padding: 14px 20px; border-bottom: 1px solid #f0f2f5; }
+        /* 内容区固定 380 = 图表 340 + 上下 padding 20：空态与图表切换时卡片高度不变 */
+        #dashboard-app .chart-card > .el-card__body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 380px;
+        }
+        #dashboard-app .chart-header { display: flex; align-items: center; justify-content: space-between; }
+        #dashboard-app .chart-title { flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 600; color: #303133; }
+        #dashboard-app .chart-title .sub {
+            display: block; margin-top: 2px;
+            font-size: 12px; font-weight: 400; color: #b1b3b8;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        #dashboard-app .chart-tools { display: flex; align-items: center; flex: 0 0 auto; padding-left: 12px; }
+        #dashboard-app .chart-date { width: 320px; margin-right: 10px; }
+        #dashboard-app .chart-box { flex: none; height: 340px; }
+        #dashboard-app .chart-empty { padding: 0; }
+
+        /* ===== 项目介绍 ===== */
+        #dashboard-app .about-card {
+            border: none;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .04);
+        }
+        #dashboard-app .about-card > .el-card__header { flex: none; padding: 14px 20px; border-bottom: 1px solid #f0f2f5; }
+        #dashboard-app .about-brand { display: flex; align-items: flex-start; }
+        #dashboard-app .about-logo {
+            flex: 0 0 48px;
+            width: 48px; height: 48px; line-height: 48px;
+            margin-right: 14px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 22px; color: #fff;
+            background: linear-gradient(135deg, #3361D1, #002E9E);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, .14);
+        }
+        #dashboard-app .about-main { flex: 1 1 auto; min-width: 0; }
+        #dashboard-app .about-name { font-size: 16px; font-weight: 600; line-height: 1.4; color: #303133; letter-spacing: .3px; }
+        #dashboard-app .about-desc { margin: 6px 0 0; font-size: 13px; line-height: 1.9; color: #606266; }
+        #dashboard-app .about-tags { display: flex; flex-wrap: wrap; margin: 10px 0 -8px; }
+        #dashboard-app .about-tags .el-tag { margin: 0 8px 8px 0; }
+        /* 底部信息行：左侧版本/技术栈/协议，右侧相关入口，窄屏自动折行 */
+        #dashboard-app .about-foot {
+            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+            margin-top: 14px; padding-top: 14px;
+            border-top: 1px dashed #e6ebf2;
+        }
+        #dashboard-app .about-meta { display: flex; flex-wrap: wrap; margin: 0; padding: 0; list-style: none; font-size: 13px; color: #606266; }
+        #dashboard-app .about-meta li { margin: 0 26px 6px 0; }
+        #dashboard-app .about-meta .k { margin-right: 6px; color: #909399; }
+        #dashboard-app .about-links { display: flex; flex-wrap: wrap; }
+        #dashboard-app .about-links .el-button { margin: 0 8px 6px 0; text-decoration: none; }
+        #dashboard-app .about-links .el-button i { margin-right: 5px; }
+
+        /* ===== 小屏适配 ===== */
+        @media (max-width: 768px) {
+            #dashboard-app .stat-card > .el-card__body { padding: 16px 18px; }
+            #dashboard-app .stat-value { font-size: 26px; }
+            #dashboard-app .chart-header { display: block; }
+            #dashboard-app .chart-tools { margin-top: 10px; padding-left: 0; }
+            #dashboard-app .chart-date { flex: 1 1 auto; width: auto; }
+            #dashboard-app .chart-title .sub { white-space: normal; }
+            #dashboard-app .about-logo {
+                flex: 0 0 40px; width: 40px; height: 40px; line-height: 40px;
+                margin-right: 12px; font-size: 18px;
+            }
+            #dashboard-app .about-foot { align-items: flex-start; }
+        }
+    </style>
+</head>
+<body class="hold-transition skin-blue sidebar-mini <#if cookieMap?exists && cookieMap["xxljob_adminlte_settings"]?exists && "off" == cookieMap["xxljob_adminlte_settings"].value >sidebar-collapse</#if>">
+<div class="wrapper">
+	<!-- header -->
+	<@netCommon.commonHeader />
+	<!-- left -->
+	<@netCommon.commonLeft "index" />
+
+	<!-- Content Wrapper. Contains page content -->
+	<div class="content-wrapper">
+		<section class="content-header">
+			<h1>${I18n.job_dashboard_name}</h1>
+		</section>
+
+		<section class="content">
+			<div id="dashboard-app" v-cloak v-loading="dataLoading">
+
+				<#-- 任务信息 -->
+				<el-row type="flex" :gutter="20">
+					<el-col :xs="24" :sm="12" :md="8">
+						<el-card class="stat-card" shadow="hover">
+							<div class="stat-body">
+								<div class="stat-icon icon-job"><i class="fa fa-flag-o"></i></div>
+								<div class="stat-info">
+									<div class="stat-label">${I18n.job_dashboard_job_num}</div>
+									<div class="stat-value">{{ animated.jobInfoCount }}</div>
+									<div class="stat-tip" title="${I18n.job_dashboard_job_num_tip}">${I18n.job_dashboard_job_num_tip}</div>
+								</div>
+							</div>
+						</el-card>
+					</el-col>
+
+					<el-col :xs="24" :sm="12" :md="8">
+						<el-card class="stat-card" shadow="hover">
+							<div class="stat-body">
+								<div class="stat-icon icon-trigger"><i class="fa fa-calendar"></i></div>
+								<div class="stat-info">
+									<div class="stat-label">${I18n.job_dashboard_trigger_num}</div>
+									<div class="stat-value">{{ animated.jobLogCount }}</div>
+									<el-progress
+										class="stat-progress"
+										:percentage="sucRate"
+										:stroke-width="10"
+										:show-text="false"
+										color="#67C23A">
+									</el-progress>
+									<div class="stat-tip" title="${I18n.job_dashboard_trigger_num_tip}">${I18n.joblog_status_suc} {{ sucRate }}% · ${I18n.job_dashboard_trigger_num_tip}</div>
+								</div>
+							</div>
+						</el-card>
+					</el-col>
+
+					<el-col :xs="24" :sm="12" :md="8">
+						<el-card class="stat-card" shadow="hover">
+							<div class="stat-body">
+								<div class="stat-icon icon-executor"><i class="fa ion-ios-settings-strong"></i></div>
+								<div class="stat-info">
+									<div class="stat-label">${I18n.job_dashboard_jobgroup_num}</div>
+									<div class="stat-value">{{ animated.executorCount }}</div>
+									<div class="stat-tip" title="${I18n.job_dashboard_jobgroup_num_tip}">${I18n.job_dashboard_jobgroup_num_tip}</div>
+								</div>
+							</div>
+						</el-card>
+					</el-col>
+				</el-row>
+
+				<#-- 调度报表 -->
+				<el-row type="flex" :gutter="20">
+					<el-col :xs="24" :md="16">
+						<el-card class="chart-card" shadow="never" v-loading="chartLoading">
+							<div slot="header">
+								<div class="chart-header">
+									<div class="chart-title">
+										${I18n.job_dashboard_date_report}
+										<span class="sub">${I18n.job_dashboard_report} · {{ filterRange[0] }} ~ {{ filterRange[1] }}</span>
+									</div>
+									<div class="chart-tools">
+										<el-date-picker
+											v-model="filterRange"
+											type="datetimerange"
+											class="chart-date"
+											range-separator="-"
+											size="mini"
+											value-format="yyyy-MM-dd HH:mm:ss"
+											:clearable="false"
+											@change="freshChartDate">
+										</el-date-picker>
+										<el-button size="mini" icon="el-icon-refresh" circle @click="reloadAll"></el-button>
+									</div>
+								</div>
+							</div>
+							<div id="lineChart" class="chart-box" v-show="!lineEmpty"></div>
+							<el-empty v-if="lineEmpty" class="chart-empty" description="${I18n.system_empty}" :image-size="90"></el-empty>
+						</el-card>
+					</el-col>
+
+					<el-col :xs="24" :md="8">
+						<el-card class="chart-card" shadow="never" v-loading="chartLoading">
+							<div slot="header">
+								<div class="chart-header">
+									<div class="chart-title">
+										${I18n.job_dashboard_rate_report}
+										<span class="sub">${I18n.job_dashboard_report}</span>
+									</div>
+								</div>
+							</div>
+							<div id="pieChart" class="chart-box" v-show="!pieEmpty"></div>
+							<el-empty v-if="pieEmpty" class="chart-empty" description="${I18n.system_empty}" :image-size="90"></el-empty>
+						</el-card>
+					</el-col>
+				</el-row>
+
+				<#-- 项目介绍 -->
+				<el-row type="flex" :gutter="20">
+					<el-col :span="24">
+						<el-card class="about-card" shadow="never">
+							<div slot="header">
+								<div class="chart-header">
+									<div class="chart-title">
+										${I18n.job_dashboard_about_title}
+										<span class="sub">${I18n.job_dashboard_about_sub}</span>
+									</div>
+								</div>
+							</div>
+							<div class="about-body">
+								<div class="about-brand">
+									<div class="about-logo"><i class="fa fa-cubes"></i></div>
+									<div class="about-main">
+										<div class="about-name">XXL-JOB-PRO</div>
+										<p class="about-desc">${I18n.job_dashboard_about_desc}</p>
+										<div class="about-tags">
+											<el-tag size="mini" type="info">${I18n.job_dashboard_about_tag1}</el-tag>
+											<el-tag size="mini" type="info">${I18n.job_dashboard_about_tag2}</el-tag>
+											<el-tag size="mini" type="info">${I18n.job_dashboard_about_tag3}</el-tag>
+											<el-tag size="mini" type="info">${I18n.job_dashboard_about_tag4}</el-tag>
+											<el-tag size="mini" type="info">${I18n.job_dashboard_about_tag5}</el-tag>
+											<el-tag size="mini" type="info">${I18n.job_dashboard_about_tag6}</el-tag>
+										</div>
+									</div>
+								</div>
+								<div class="about-foot">
+									<ul class="about-meta">
+										<li><span class="k">${I18n.job_dashboard_about_meta_version}</span>v${I18n.admin_version}</li>
+										<li><span class="k">${I18n.job_dashboard_about_meta_stack}</span>${I18n.job_dashboard_about_stack_value}</li>
+										<li><span class="k">${I18n.job_dashboard_about_meta_license}</span>${I18n.job_dashboard_about_license_value}</li>
+									</ul>
+									<div class="about-links">
+										<a class="el-button el-button--default el-button--mini" href="https://gitee.com/chongkelai/xxl-job-pro" target="_blank" rel="noopener"><i class="fa fa-git"></i>${I18n.job_dashboard_about_link_repo}</a>
+										<a class="el-button el-button--default el-button--mini" href="https://www.xuxueli.com/xxl-job/" target="_blank" rel="noopener"><i class="fa fa-book"></i>${I18n.job_dashboard_about_link_doc}</a>
+										<a class="el-button el-button--default el-button--mini" href="${request.contextPath}/help"><i class="el-icon-document"></i>${I18n.job_dashboard_about_link_api}</a>
+									</div>
+								</div>
+							</div>
+						</el-card>
+					</el-col>
+				</el-row>
+
+			</div>
+		</section>
+	</div>
+
+	<!-- footer -->
+	<@netCommon.commonFooter />
+</div>
+<@netCommon.commonScript />
+<#-- echarts -->
+<script src="${request.contextPath}/static/plugins/echarts/echarts.common.min.js"></script>
+<script type="text/javascript">
+(function () {
+
+	// 与 Element UI 语义色保持一致：成功 / 失败 / 进行中
+	var STATUS = [
+		{ label: I18n.joblog_status_suc,     color: '#67C23A', rgb: '103,194,58',
+		  dayList: 'triggerDayCountSucList',     total: 'triggerCountSucTotal' },
+		{ label: I18n.joblog_status_fail,    color: '#F56C6C', rgb: '245,108,108',
+		  dayList: 'triggerDayCountFailList',    total: 'triggerCountFailTotal' },
+		{ label: I18n.joblog_status_running, color: '#E6A23C', rgb: '230,162,60',
+		  dayList: 'triggerDayCountRunningList', total: 'triggerCountRunningTotal' }
+	];
+
+	function pad(n) { return n < 10 ? ('0' + n) : ('' + n); }
+
+	function fmt(d) {
+		return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+			+ ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+	}
+
+	// 默认最近一周
+	function defaultRange() {
+		var e = new Date();
+		var s = new Date(e.getTime() - 7 * 24 * 3600 * 1000);
+		s.setHours(0, 0, 0, 0);
+		e.setHours(23, 59, 59, 0);
+		return [ fmt(s), fmt(e) ];
+	}
+
+	new Vue({
+		el: '#dashboard-app',
+		data: {
+			dashboard: { jobInfoCount: 0, jobLogCount: 0, jobLogSuccessCount: 0, executorCount: 0 },
+			// 用于数字滚动动画的展示值
+			animated: { jobInfoCount: 0, jobLogCount: 0, executorCount: 0 },
+			filterRange: defaultRange(),
+			dataLoading: false,
+			chartLoading: false,
+			lineEmpty: false,
+			pieEmpty: false
+		},
+		computed: {
+			// 成功占比（基于 /dashboard/initData 返回的 jobLogSuccessCount）
+			sucRate: function () {
+				var total = this.dashboard.jobLogCount || 0;
+				if (!total) { return 0; }
+				return Math.round((this.dashboard.jobLogSuccessCount || 0) * 1000 / total) / 10;
+			}
+		},
+		mounted: function () {
+			// ECharts 实例挂为非响应式属性，避免被 Vue 深度代理
+			this.lineChart = echarts.init(document.getElementById('lineChart'));
+			this.pieChart = echarts.init(document.getElementById('pieChart'));
+			window.addEventListener('resize', this.handleResize);
+
+			this.initData();
+			this.freshChartDate();
+		},
+		beforeDestroy: function () {
+			window.removeEventListener('resize', this.handleResize);
+			if (this.lineChart) { this.lineChart.dispose(); }
+			if (this.pieChart) { this.pieChart.dispose(); }
+		},
+		methods: {
+			reloadAll: function () {
+				this.initData();
+				this.freshChartDate();
+			},
+			handleResize: function () {
+				if (this.lineChart) { this.lineChart.resize(); }
+				if (this.pieChart) { this.pieChart.resize(); }
+			},
+			initData: function () {
+				var that = this;
+				this.dataLoading = true;
+				$.ajax({
+					type: 'GET',
+					url: base_url + '/dashboard/initData',
+					dataType: 'json',
+					success: function (res) {
+						if (res.code == 200 && res.content) {
+							that.dashboard = res.content;
+							that.animateNumber('jobInfoCount', res.content.jobInfoCount || 0);
+							that.animateNumber('jobLogCount', res.content.jobLogCount || 0);
+							that.animateNumber('executorCount', res.content.executorCount || 0);
+						}
+					},
+					complete: function () { that.dataLoading = false; }
+				});
+			},
+			// easeOutCubic 数字滚动
+			animateNumber: function (key, target) {
+				var that = this;
+				var from = this.animated[key] || 0;
+				if (from === target) { return; }
+				var duration = 700, startTime = null;
+				function step(ts) {
+					if (startTime === null) { startTime = ts; }
+					var p = Math.min((ts - startTime) / duration, 1);
+					var eased = 1 - Math.pow(1 - p, 3);
+					that.animated[key] = Math.round(from + (target - from) * eased);
+					if (p < 1) { requestAnimationFrame(step); }
+				}
+				requestAnimationFrame(step);
+			},
+			freshChartDate: function () {
+				if (!this.filterRange || this.filterRange.length != 2) { return; }
+				var that = this;
+				this.chartLoading = true;
+				$.ajax({
+					type: 'POST',
+					url: base_url + '/chartInfo',
+					data: { startDate: this.filterRange[0], endDate: this.filterRange[1] },
+					dataType: 'json',
+					success: function (res) {
+						if (res.code == 200 && res.content) {
+							that.lineChartInit(res.content);
+							that.pieChartInit(res.content);
+						} else {
+							that.$message.error(res.msg || I18n.job_dashboard_report_loaddata_fail);
+						}
+					},
+					error: function () { that.$message.error(I18n.job_dashboard_report_loaddata_fail); },
+					complete: function () { that.chartLoading = false; }
+				});
+			},
+			// 面积渐变填充（echarts 4.x：样式需置于 normal 下）
+			areaStyle: function (rgb) {
+				return new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+					{ offset: 0, color: 'rgba(' + rgb + ', .38)' },
+					{ offset: 1, color: 'rgba(' + rgb + ', .02)' }
+				]);
+			},
+			lineChartInit: function (c) {
+				var dayList = c.triggerDayList || [];
+				this.lineEmpty = dayList.length === 0;
+
+				var series = STATUS.map(function (m) {
+					return {
+						name: m.label,
+						type: 'line',
+						stack: 'total',
+						smooth: true,
+						symbol: 'circle',
+						symbolSize: 7,
+						showSymbol: false,
+						lineStyle: { normal: { width: 2 } },
+						areaStyle: { normal: { color: this.areaStyle(m.rgb) } },
+						data: c[m.dayList] || []
+					};
+				}, this);
+
+				this.lineChart.setOption({
+					color: STATUS.map(function (m) { return m.color; }),
+					tooltip: {
+						trigger: 'axis',
+						axisPointer: { type: 'cross', label: { backgroundColor: '#6a7985' } }
+					},
+					legend: {
+						top: 4, right: 4, icon: 'roundRect',
+						itemWidth: 12, itemHeight: 8, itemGap: 14,
+						textStyle: { color: '#606266', fontSize: 12 },
+						data: series.map(function (s) { return s.name; })
+					},
+					grid: { top: 46, right: 24, bottom: 30, left: 12, containLabel: true },
+					xAxis: {
+						type: 'category',
+						boundaryGap: false,
+						data: dayList,
+						axisTick: { show: false },
+						axisLine: { lineStyle: { color: '#dcdfe6' } },
+						axisLabel: { color: '#909399' }
+					},
+					yAxis: {
+						type: 'value',
+						minInterval: 1,
+						axisLabel: { color: '#909399' },
+						splitLine: { lineStyle: { color: '#f0f2f5', type: 'dashed' } }
+					},
+					series: series
+				}, true);
+
+				// 由空态切回图表时容器尺寸可能已变化
+				var self = this;
+				this.$nextTick(function () { if (!self.lineEmpty) { self.lineChart.resize(); } });
+			},
+			pieChartInit: function (c) {
+				var data = STATUS.map(function (m) {
+					return { name: m.label, value: c[m.total] || 0 };
+				});
+				var total = data.reduce(function (sum, d) { return sum + (d.value || 0); }, 0);
+				this.pieEmpty = total === 0;
+
+				this.pieChart.setOption({
+					color: STATUS.map(function (m) { return m.color; }),
+					// 环形中心展示调度总次数
+					title: {
+						text: '' + total,
+						subtext: I18n.job_dashboard_trigger_num,
+						left: 'center', top: '34%',
+						textStyle: { fontSize: 24, fontWeight: 600, color: '#303133' },
+						subtextStyle: { fontSize: 12, color: '#909399' }
+					},
+					tooltip: { trigger: 'item', formatter: '{b}<br/>{c} ({d}%)' },
+					legend: {
+						bottom: 8, left: 'center', icon: 'circle',
+						itemWidth: 8, itemHeight: 8, itemGap: 14,
+						textStyle: { color: '#606266', fontSize: 12 }
+					},
+					series: [{
+						type: 'pie',
+						radius: ['50%', '70%'],
+						center: ['50%', '46%'],
+						avoidLabelOverlap: true,
+						itemStyle: {
+							normal: { borderColor: '#fff', borderWidth: 2 },
+							emphasis: { shadowBlur: 12, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, .18)' }
+						},
+						label: {
+							normal: { show: true, formatter: '{b}\n{d}%', color: '#606266', fontSize: 12 },
+							emphasis: { show: true, fontWeight: 'bold' }
+						},
+						labelLine: { normal: { length: 8, length2: 10 } },
+						data: data
+					}]
+				}, true);
+
+				var self = this;
+				this.$nextTick(function () { if (!self.pieEmpty) { self.pieChart.resize(); } });
+			}
+		}
+	});
+
+})();
+</script>
+</body>
+</html>

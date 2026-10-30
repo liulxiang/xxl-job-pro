@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html>
+<head>
+  	<#import "../common/macro.html" as netCommon>
+	<@netCommon.commonStyle />
+	<title>${I18n.admin_name}</title>
+	<style type="text/css">
+		[v-cloak] { display: none; }
+		#apiclient-app .query-block { margin-bottom: 12px; }
+		#apiclient-app .el-form .el-select, #apiclient-app .el-form .el-input { width: 100%; }
+	</style>
+</head>
+<body class="hold-transition skin-blue sidebar-mini <#if cookieMap?exists && cookieMap["xxljob_adminlte_settings"]?exists && "off" == cookieMap["xxljob_adminlte_settings"].value >sidebar-collapse</#if>">
+<div class="wrapper">
+	<!-- header -->
+	<@netCommon.commonHeader />
+	<!-- left -->
+	<@netCommon.commonLeft "apiclient" />
+
+	<!-- Content Wrapper -->
+	<div class="content-wrapper">
+		<section class="content-header">
+			<h1>${I18n.apiclient_manage}</h1>
+		</section>
+
+		<section class="content">
+			<div id="apiclient-app" v-cloak>
+
+				<#-- 查询区 -->
+				<div class="query-block">
+					<el-form :inline="true" size="mini">
+						<el-form-item>
+							<el-input v-model="queryParams.appKey" placeholder="${I18n.apiclient_app_key}" clearable @keyup.enter.native="handleQuery"></el-input>
+						</el-form-item>
+						<el-form-item>
+							<el-button type="primary" icon="el-icon-search" @click="handleQuery">${I18n.system_search}</el-button>
+							<el-button type="success" icon="el-icon-plus" @click="handleAdd">${I18n.apiclient_add}</el-button>
+						</el-form-item>
+					</el-form>
+
+					<el-table :data="dataList" v-loading="dataListLoading" border stripe size="mini" style="width:100%">
+						<el-table-column prop="id" label="ID" width="60" header-align="center" align="center"></el-table-column>
+						<el-table-column prop="appKey" label="${I18n.apiclient_app_key}" header-align="center" align="center" show-overflow-tooltip></el-table-column>
+						<el-table-column prop="appSecret" label="${I18n.apiclient_app_secret}" width="110" header-align="center" align="center"></el-table-column>
+						<el-table-column prop="username" label="${I18n.apiclient_bind_user}" width="110" header-align="center" align="center" show-overflow-tooltip></el-table-column>
+						<el-table-column prop="callbackUrl" label="${I18n.apiclient_callback_url}" header-align="center" align="center" show-overflow-tooltip></el-table-column>
+						<el-table-column label="${I18n.apiclient_status}" width="90" header-align="center" align="center">
+							<template slot-scope="scope">
+								<el-tag v-if="scope.row.status==1" type="success" size="mini" effect="dark">${I18n.apiclient_status_enabled}</el-tag>
+								<el-tag v-else type="info" size="mini">${I18n.apiclient_status_disabled}</el-tag>
+							</template>
+						</el-table-column>
+						<el-table-column prop="remark" label="${I18n.apiclient_remark}" width="120" header-align="center" align="center" show-overflow-tooltip></el-table-column>
+						<el-table-column label="${I18n.system_opt}" width="110" header-align="center" align="center">
+							<template slot-scope="scope">
+								<el-dropdown trigger="click" @command="handleCommand($event, scope.row)">
+									<el-button type="primary" size="mini">${I18n.system_opt}<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+									<el-dropdown-menu slot="dropdown">
+										<el-dropdown-item command="edit">${I18n.system_opt_edit}</el-dropdown-item>
+										<el-dropdown-item command="del">${I18n.system_opt_del}</el-dropdown-item>
+									</el-dropdown-menu>
+								</el-dropdown>
+							</template>
+						</el-table-column>
+					</el-table>
+
+					<el-pagination
+						background
+						layout="total, sizes, prev, pager, next"
+						:total="total"
+						:current-page="queryParams.page"
+						:page-size="queryParams.rows"
+						:page-sizes="[10, 20, 50, 100]"
+						@size-change="sizeChangeHandle"
+						@current-change="currentChangeHandle"
+						style="margin-top:16px;text-align:center;">
+					</el-pagination>
+				</div>
+
+				<#-- 新增/编辑 弹窗 -->
+				<el-dialog :title="formTitle" :visible.sync="formDialogVisible" :append-to-body="true" width="560px" top="8vh" :close-on-click-modal="false">
+					<el-form :model="dataForm" :rules="dataRule" ref="dataForm" label-width="130px" size="small">
+						<el-form-item label="${I18n.apiclient_app_key}" prop="appKey">
+							<el-input v-model="dataForm.appKey" maxlength="64" :readonly="isEdit" placeholder="${I18n.system_please_input}${I18n.apiclient_app_key}"></el-input>
+						</el-form-item>
+						<el-form-item label="${I18n.apiclient_app_secret}" prop="appSecret">
+							<el-input v-model="dataForm.appSecret" maxlength="128" :placeholder="isEdit ? '${I18n.apiclient_app_secret_update_placeholder}' : '${I18n.system_please_input}${I18n.apiclient_app_secret}'"></el-input>
+						</el-form-item>
+						<el-form-item label="${I18n.apiclient_bind_user}" prop="username">
+							<el-select v-model="dataForm.username" placeholder="${I18n.system_please_choose}${I18n.apiclient_bind_user}">
+								<el-option v-for="u in userList" :key="u.username" :label="u.username" :value="u.username"></el-option>
+							</el-select>
+						</el-form-item>
+						<el-form-item label="${I18n.apiclient_callback_url}">
+							<el-input v-model="dataForm.callbackUrl" maxlength="255" placeholder="${I18n.apiclient_callback_url_placeholder}"></el-input>
+						</el-form-item>
+						<el-form-item label="${I18n.apiclient_status}">
+							<el-radio-group v-model="dataForm.status">
+								<el-radio :label="1">${I18n.apiclient_status_enabled}</el-radio>
+								<el-radio :label="0">${I18n.apiclient_status_disabled}</el-radio>
+							</el-radio-group>
+						</el-form-item>
+						<el-form-item label="${I18n.apiclient_remark}">
+							<el-input v-model="dataForm.remark" maxlength="255" placeholder="${I18n.apiclient_remark}"></el-input>
+						</el-form-item>
+					</el-form>
+					<span slot="footer">
+						<el-button @click="formDialogVisible=false">${I18n.system_cancel}</el-button>
+						<el-button type="primary" @click="dataFormSubmit">${I18n.system_save}</el-button>
+					</span>
+				</el-dialog>
+
+			</div>
+		</section>
+	</div>
+
+	<!-- footer -->
+	<@netCommon.commonFooter />
+</div>
+
+<@netCommon.commonScript />
+<script type="text/javascript">
+var apiApp = new Vue({
+	el: '#apiclient-app',
+	data: {
+		userList: [],
+		dataList: [],
+		dataListLoading: false,
+		total: 0,
+		queryParams: {
+			appKey: '',
+			page: 1,
+			rows: 10
+		},
+
+		formDialogVisible: false,
+		formTitle: '',
+		isEdit: false,
+		dataForm: {},
+		dataRule: {
+			appKey: [
+				{ required: true, message: '${I18n.system_please_input}${I18n.apiclient_app_key}', trigger: 'blur' }
+			],
+			appSecret: [
+				{ validator: function (rule, value, callback) {
+					if (!apiApp.isEdit && !value) { return callback(new Error('${I18n.system_please_input}${I18n.apiclient_app_secret}')); }
+					callback();
+				}, trigger: 'blur' }
+			],
+			username: [
+				{ required: true, message: '${I18n.system_please_choose}${I18n.apiclient_bind_user}', trigger: 'change' }
+			]
+		}
+	},
+	created: function () {
+		this.initData();
+		this.getDataList();
+	},
+	methods: {
+		initData: function () {
+			var that = this;
+			$.ajax({
+				type: 'GET',
+				url: base_url + '/apiclient/initData',
+				dataType: 'json',
+				success: function (res) {
+					if (res.code != 200) { that.$message.error(res.msg || '${I18n.system_fail}'); return; }
+					that.userList = res.content.userList || [];
+				}
+			});
+		},
+
+		handleQuery: function () { this.queryParams.page = 1; this.getDataList(); },
+		getDataList: function () {
+			var that = this;
+			this.dataListLoading = true;
+			$.ajax({
+				type: 'POST',
+				url: base_url + '/apiclient/pageList',
+				data: {
+					start: (this.queryParams.page - 1) * this.queryParams.rows,
+					length: this.queryParams.rows,
+					appKey: this.queryParams.appKey
+				},
+				dataType: 'json',
+				success: function (res) {
+					that.dataListLoading = false;
+					that.dataList = res.data || [];
+					that.total = parseInt(res.recordsTotal || 0);
+				},
+				error: function () { that.dataListLoading = false; that.$message.error('${I18n.system_fail}'); }
+			});
+		},
+		sizeChangeHandle: function (val) { this.queryParams.rows = val; this.queryParams.page = 1; this.getDataList(); },
+		currentChangeHandle: function (val) { this.queryParams.page = val; this.getDataList(); },
+
+		handleCommand: function (cmd, row) {
+			if (cmd == 'edit') { this.handleUpdate(row); }
+			else if (cmd == 'del') { this.handleDelete(row); }
+		},
+
+		resetForm: function () {
+			this.dataForm = { id: null, appKey: '', appSecret: '', username: '', callbackUrl: '', status: 1, remark: '' };
+		},
+		handleAdd: function () {
+			this.resetForm();
+			this.isEdit = false;
+			this.formTitle = '${I18n.apiclient_add}';
+			this.formDialogVisible = true;
+			this.$nextTick(this.afterFormOpen);
+		},
+		handleUpdate: function (row) {
+			this.isEdit = true;
+			this.formTitle = '${I18n.apiclient_update}';
+			this.dataForm = {
+				id: row.id, appKey: row.appKey, appSecret: '', username: row.username,
+				callbackUrl: row.callbackUrl || '', status: row.status, remark: row.remark || ''
+			};
+			this.formDialogVisible = true;
+			this.$nextTick(this.afterFormOpen);
+		},
+		afterFormOpen: function () {
+			if (this.$refs.dataForm) { this.$refs.dataForm.clearValidate(); }
+		},
+		dataFormSubmit: function () {
+			var that = this;
+			this.$refs.dataForm.validate(function (valid) {
+				if (!valid) { return; }
+				var payload = $.extend(true, {}, that.dataForm);
+				// 编辑时 secret 为空表示不修改，删除该字段避免覆盖
+				if (that.isEdit && !payload.appSecret) { delete payload.appSecret; }
+				if (!payload.id) { delete payload.id; }
+				var url = that.isEdit ? (base_url + '/apiclient/update') : (base_url + '/apiclient/add');
+				that.post(url, payload, function (res) {
+					if (res.code == 200) {
+						that.formDialogVisible = false;
+						that.$message.success(that.isEdit ? '${I18n.system_update_suc}' : '${I18n.system_add_suc}');
+						that.getDataList();
+					} else {
+						that.$message.error(res.msg || '${I18n.system_fail}');
+					}
+				});
+			});
+		},
+		handleDelete: function (row) {
+			var that = this;
+			this.$confirm('${I18n.system_ok}${I18n.system_opt_del}?', '${I18n.system_tips}', {
+				confirmButtonText: '${I18n.system_ok}', cancelButtonText: '${I18n.system_cancel}', type: 'warning'
+			}).then(function () {
+				that.post(base_url + '/apiclient/remove', { id: row.id }, function (res) {
+					if (res.code == 200) { that.$message.success('${I18n.system_success}'); that.getDataList(); }
+					else { that.$message.error(res.msg || '${I18n.system_opt_del}${I18n.system_fail}'); }
+				});
+			}).catch(function () {});
+		},
+
+		post: function (url, data, cb) {
+			var that = this;
+			$.ajax({
+				type: 'POST', url: url, data: data, dataType: 'json',
+				success: cb,
+				error: function (xhr) { that.$message.error('${I18n.system_fail}' + (xhr && xhr.status ? (' [' + xhr.status + ']') : '')); }
+			});
+		}
+	}
+});
+</script>
+</body>
+</html>

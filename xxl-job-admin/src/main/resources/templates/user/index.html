@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+  	<#import "../common/macro.html" as netCommon>
+	<@netCommon.commonStyle />
+	<title>${I18n.admin_name}</title>
+	<style type="text/css">
+		[v-cloak] { display: none; }
+		#user-app .query-block { margin-bottom: 12px; }
+		#user-app .el-form .el-select, #user-app .el-form .el-input { width: 100%; }
+		#user-app .perm-item { display: block; margin: 2px 0; }
+	</style>
+</head>
+<body class="hold-transition skin-blue sidebar-mini <#if cookieMap?exists && cookieMap["xxljob_adminlte_settings"]?exists && "off" == cookieMap["xxljob_adminlte_settings"].value >sidebar-collapse</#if>">
+<div class="wrapper">
+	<!-- header -->
+	<@netCommon.commonHeader />
+	<!-- left -->
+	<@netCommon.commonLeft "user" />
+
+	<!-- Content Wrapper -->
+	<div class="content-wrapper">
+		<section class="content-header">
+			<h1>${I18n.user_manage}</h1>
+		</section>
+
+		<section class="content">
+			<div id="user-app" v-cloak>
+
+				<#-- 查询区 -->
+				<div class="query-block">
+					<el-form :inline="true" size="mini">
+						<el-form-item>
+							<el-select v-model="queryParams.role" @change="handleQuery">
+								<el-option :value="-1" label="${I18n.system_all}"></el-option>
+								<el-option :value="1" label="${I18n.user_role_admin}"></el-option>
+								<el-option :value="0" label="${I18n.user_role_normal}"></el-option>
+							</el-select>
+						</el-form-item>
+						<el-form-item>
+							<el-input v-model="queryParams.username" placeholder="${I18n.user_username}" clearable @keyup.enter.native="handleQuery"></el-input>
+						</el-form-item>
+						<el-form-item>
+							<el-button type="primary" icon="el-icon-search" @click="handleQuery">${I18n.system_search}</el-button>
+							<el-button type="success" icon="el-icon-plus" @click="handleAdd">${I18n.user_add}</el-button>
+						</el-form-item>
+					</el-form>
+
+					<el-table :data="dataList" v-loading="dataListLoading" border stripe size="mini" style="width:100%">
+						<el-table-column prop="id" label="ID" width="60" header-align="center" align="center"></el-table-column>
+						<el-table-column prop="username" label="${I18n.user_username}" header-align="center" align="center" show-overflow-tooltip></el-table-column>
+						<el-table-column label="${I18n.user_role}" width="100" header-align="center" align="center">
+							<template slot-scope="scope">
+								<el-tag v-if="scope.row.role==1" type="danger" size="mini" effect="dark">${I18n.user_role_admin}</el-tag>
+								<el-tag v-else type="info" size="mini">${I18n.user_role_normal}</el-tag>
+							</template>
+						</el-table-column>
+						<el-table-column label="${I18n.user_permission}" header-align="center" align="center" show-overflow-tooltip>
+							<template slot-scope="scope">{{ permissionText(scope.row) }}</template>
+						</el-table-column>
+						<el-table-column label="${I18n.system_opt}" width="110" header-align="center" align="center">
+							<template slot-scope="scope">
+								<el-dropdown trigger="click" @command="handleCommand($event, scope.row)">
+									<el-button type="primary" size="mini">${I18n.system_opt}<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+									<el-dropdown-menu slot="dropdown">
+										<el-dropdown-item command="edit">${I18n.system_opt_edit}</el-dropdown-item>
+										<el-dropdown-item command="del">${I18n.system_opt_del}</el-dropdown-item>
+									</el-dropdown-menu>
+								</el-dropdown>
+							</template>
+						</el-table-column>
+					</el-table>
+
+					<el-pagination
+						background
+						layout="total, sizes, prev, pager, next"
+						:total="total"
+						:current-page="queryParams.page"
+						:page-size="queryParams.rows"
+						:page-sizes="[10, 20, 50, 100]"
+						@size-change="sizeChangeHandle"
+						@current-change="currentChangeHandle"
+						style="margin-top:16px;text-align:center;">
+					</el-pagination>
+				</div>
+
+				<#-- 新增/编辑 弹窗 -->
+				<el-dialog :title="formTitle" :visible.sync="formDialogVisible" :append-to-body="true" width="560px" top="8vh" :close-on-click-modal="false">
+					<el-form :model="dataForm" :rules="dataRule" ref="dataForm" label-width="110px" size="small">
+						<el-form-item label="${I18n.user_username}" prop="username">
+							<el-input v-model="dataForm.username" maxlength="20" :readonly="isEdit" placeholder="${I18n.system_please_input}${I18n.user_username}"></el-input>
+						</el-form-item>
+						<el-form-item label="${I18n.user_password}" prop="password">
+							<el-input v-model="dataForm.password" maxlength="20" :placeholder="isEdit ? '${I18n.user_password_update_placeholder}' : '${I18n.system_please_input}${I18n.user_password}'"></el-input>
+						</el-form-item>
+						<el-form-item label="${I18n.user_role}">
+							<el-radio-group v-model="dataForm.role">
+								<el-radio :label="0">${I18n.user_role_normal}</el-radio>
+								<el-radio :label="1">${I18n.user_role_admin}</el-radio>
+							</el-radio-group>
+						</el-form-item>
+						<el-form-item label="${I18n.user_permission}" v-show="dataForm.role==0">
+							<el-checkbox-group v-model="dataForm.permissionArr">
+								<el-checkbox v-for="g in groupList" :key="g.id" :label="g.id" class="perm-item">{{ g.title }}({{ g.appname }})</el-checkbox>
+							</el-checkbox-group>
+							<div v-if="groupList.length==0" style="color:#909399">${I18n.system_empty}</div>
+						</el-form-item>
+					</el-form>
+					<span slot="footer">
+						<el-button @click="formDialogVisible=false">${I18n.system_cancel}</el-button>
+						<el-button type="primary" @click="dataFormSubmit">${I18n.system_save}</el-button>
+					</span>
+				</el-dialog>
+
+			</div>
+		</section>
+	</div>
+
+	<!-- footer -->
+	<@netCommon.commonFooter />
+</div>
+
+<@netCommon.commonScript />
+<script type="text/javascript">
+var userApp = new Vue({
+	el: '#user-app',
+	data: {
+		groupList: [],
+		dataList: [],
+		dataListLoading: false,
+		total: 0,
+		queryParams: {
+			username: '',
+			role: -1,
+			page: 1,
+			rows: 10
+		},
+
+		formDialogVisible: false,
+		formTitle: '',
+		isEdit: false,
+		dataForm: {},
+		dataRule: {
+			username: [
+				{ required: true, message: '${I18n.system_please_input}${I18n.user_username}', trigger: 'blur' },
+				{ min: 4, max: 20, message: '${I18n.system_lengh_limit}[4-20]', trigger: 'blur' },
+				{ pattern: /^[a-z][a-z0-9]*$/, message: '${I18n.user_username_valid}', trigger: 'blur' }
+			],
+			password: [
+				{ validator: function (rule, value, callback) {
+					// 新增必填且 4-20；编辑可空（不修改），若填写则需 4-20
+					if (!userApp.isEdit) {
+						if (!value || value.length < 4 || value.length > 20) {
+							return callback(new Error('${I18n.system_please_input}${I18n.user_password} [4-20]'));
+						}
+					} else if (value && (value.length < 4 || value.length > 20)) {
+						return callback(new Error('${I18n.system_lengh_limit}[4-20]'));
+					}
+					callback();
+				}, trigger: 'blur' }
+			]
+		}
+	},
+	created: function () {
+		this.initData();
+		this.getDataList();
+	},
+	methods: {
+		initData: function () {
+			var that = this;
+			$.ajax({
+				type: 'GET',
+				url: base_url + '/user/initData',
+				dataType: 'json',
+				success: function (res) {
+					if (res.code != 200) { that.$message.error(res.msg || '${I18n.system_fail}'); return; }
+					that.groupList = res.content.groupList || [];
+				}
+			});
+		},
+
+		handleQuery: function () { this.queryParams.page = 1; this.getDataList(); },
+		getDataList: function () {
+			var that = this;
+			this.dataListLoading = true;
+			$.ajax({
+				type: 'POST',
+				url: base_url + '/user/pageList',
+				data: {
+					start: (this.queryParams.page - 1) * this.queryParams.rows,
+					length: this.queryParams.rows,
+					username: this.queryParams.username,
+					role: this.queryParams.role
+				},
+				dataType: 'json',
+				success: function (res) {
+					that.dataListLoading = false;
+					that.dataList = res.data || [];
+					that.total = parseInt(res.recordsTotal || 0);
+				},
+				error: function () { that.dataListLoading = false; that.$message.error('${I18n.system_fail}'); }
+			});
+		},
+		sizeChangeHandle: function (val) { this.queryParams.rows = val; this.queryParams.page = 1; this.getDataList(); },
+		currentChangeHandle: function (val) { this.queryParams.page = val; this.getDataList(); },
+
+		permissionText: function (row) {
+			if (row.role == 1) { return '${I18n.user_role_admin}'; }
+			if (!row.permission) { return '-'; }
+			var groups = this.groupList;
+			var names = [];
+			row.permission.split(',').forEach(function (id) {
+				var g = groups.find(function (x) { return x.id == id; });
+				names.push(g ? g.title : id);
+			});
+			return names.join('、');
+		},
+
+		handleCommand: function (cmd, row) {
+			if (cmd == 'edit') { this.handleUpdate(row); }
+			else if (cmd == 'del') { this.handleDelete(row); }
+		},
+
+		resetForm: function () {
+			this.dataForm = { id: null, username: '', password: '', role: 0, permissionArr: [] };
+		},
+		handleAdd: function () {
+			this.resetForm();
+			this.isEdit = false;
+			this.formTitle = '${I18n.user_add}';
+			this.formDialogVisible = true;
+			this.$nextTick(this.afterFormOpen);
+		},
+		handleUpdate: function (row) {
+			this.isEdit = true;
+			this.formTitle = '${I18n.user_update}';
+			var arr = [];
+			if (row.permission) {
+				row.permission.split(',').forEach(function (id) { if (/^\d+$/.test(id)) { arr.push(parseInt(id)); } });
+			}
+			this.dataForm = {
+				id: row.id, username: row.username, password: '', role: row.role, permissionArr: arr
+			};
+			this.formDialogVisible = true;
+			this.$nextTick(this.afterFormOpen);
+		},
+		afterFormOpen: function () {
+			if (this.$refs.dataForm) { this.$refs.dataForm.clearValidate(); }
+		},
+		dataFormSubmit: function () {
+			var that = this;
+			this.$refs.dataForm.validate(function (valid) {
+				if (!valid) { return; }
+				var payload = {
+					username: that.dataForm.username,
+					password: that.dataForm.password,
+					role: that.dataForm.role,
+					permission: (that.dataForm.role == 1) ? '' : that.dataForm.permissionArr.join(',')
+				};
+				var url;
+				if (that.isEdit) {
+					payload.id = that.dataForm.id;
+					url = base_url + '/user/update';
+				} else {
+					url = base_url + '/user/add';
+				}
+				that.post(url, payload, function (res) {
+					if (res.code == 200) {
+						that.formDialogVisible = false;
+						that.$message.success(that.isEdit ? '${I18n.system_update_suc}' : '${I18n.system_add_suc}');
+						that.getDataList();
+					} else {
+						that.$message.error(res.msg || '${I18n.system_fail}');
+					}
+				});
+			});
+		},
+		handleDelete: function (row) {
+			var that = this;
+			this.$confirm('${I18n.system_ok}${I18n.system_opt_del}?', '${I18n.system_tips}', {
+				confirmButtonText: '${I18n.system_ok}', cancelButtonText: '${I18n.system_cancel}', type: 'warning'
+			}).then(function () {
+				that.post(base_url + '/user/remove', { id: row.id }, function (res) {
+					if (res.code == 200) { that.$message.success('${I18n.system_success}'); that.getDataList(); }
+					else { that.$message.error(res.msg || '${I18n.system_opt_del}${I18n.system_fail}'); }
+				});
+			}).catch(function () {});
+		},
+
+		post: function (url, data, cb) {
+			var that = this;
+			$.ajax({
+				type: 'POST', url: url, data: data, dataType: 'json',
+				success: cb,
+				error: function (xhr) { that.$message.error('${I18n.system_fail}' + (xhr && xhr.status ? (' [' + xhr.status + ']') : '')); }
+			});
+		}
+	}
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+### -------------------------------------------------------------------
+### xxl-job-admin 配置（由 application.properties 迁移为 YAML 格式）
+### 键名拼写与原 properties 保持 1:1 一致，避免 @Value 注入解析差异
+### -------------------------------------------------------------------
+
+### web
+server:
+  port: 8081
+  servlet:
+    context-path: /xxl-job-admin
+
+### actuator
+management:
+  server:
+    base-path: /actuator
+  health:
+    mail:
+      enabled: false
+
+spring:
+  ### resources
+  mvc:
+    servlet:
+      load-on-startup: 0
+    static-path-pattern: /static/**
+  web:
+    resources:
+      static-locations: classpath:/static/
+
+  ### freemarker
+  freemarker:
+    templateLoaderPath: classpath:/templates/
+    suffix: .html
+    charset: UTF-8
+    request-context-attribute: request
+    settings:
+      number_format: "0.##########"
+      new_builtin_class_resolver: safer
+
+  ### datasource-pool + xxl-job, datasource
+  datasource:
+    type: com.zaxxer.hikari.HikariDataSource
+    url: "jdbc:mysql://127.0.0.1:3306/xxl_job?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&serverTimezone=Asia/Shanghai"
+    username: root
+    password: 12345678
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      minimum-idle: 10
+      maximum-pool-size: 30
+      auto-commit: true
+      idle-timeout: 30000
+      pool-name: HikariCP
+      max-lifetime: 900000
+      connection-timeout: 10000
+      connection-test-query: SELECT 1
+      validation-timeout: 1000
+
+  ### xxl-job, email
+  mail:
+    host: smtp.qq.com
+    port: 25
+    username: 593061846@qq.com
+    from: 593061846@qq.com
+    password: xxx
+    # properties 绑定为 Properties（无类型 Map），值需保持字符串以与原 properties 完全一致
+    properties:
+      mail:
+        smtp:
+          auth: "true"
+          starttls:
+            enable: "true"
+            required: "true"
+          socketFactory:
+            class: javax.net.ssl.SSLSocketFactory
+
+### mybatis
+mybatis:
+  mapper-locations: classpath:/mybatis-mapper/*Mapper.xml
+
+### -------------------------------------------------------------------
+### xxl-job 自定义配置
+### -------------------------------------------------------------------
+xxl:
+  job:
+    ### xxl-job, access token
+    accessToken: default_token
+
+    ### xxl-job, executor timeout (seconds)
+    timeout: 3
+
+    ### xxl-job, i18n (default is zh_CN, and you can choose "zh_CN", "zh_TC" and "en")
+    i18n: zh_CN
+
+    ## xxl-job, triggerpool max size
+    triggerpool:
+      fast:
+        max: 200
+      slow:
+        max: 100
+
+    ### xxl-job, openapi (远程API创建/触发任务)
+    openapi:
+      # 时间戳有效窗口（毫秒），默认5分钟，用于防重放
+      timestamp:
+        window: 300000
+
+    ### xxl-job, log retention days
+    logretentiondays: 30
+
+    ### xxl-job admin https config
+    admin:
+      # 是否启用HTTPS
+      enableHttps: false
+      # SSL证书路径（支持classpath路径和文件系统路径）
+      keyStorePath: ""
+      # SSL证书密码
+      keyStorePassword: ""
+      # SSL证书类型（JKS、PKCS12等）
+      keyStoreType: JKS
+      # SSL证书别名（可选）
+      keyAlias: ""
