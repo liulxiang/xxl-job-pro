@@ -64,7 +64,6 @@ build/
 *.iml
 target/
 .DS_Store
-.gitattributes
 ### VS Code ###
 .vscode/
 

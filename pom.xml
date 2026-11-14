@@ -7,8 +7,8 @@
 	<packaging>pom</packaging>
 
 	<name>${project.artifactId}</name>
-	<description>An enhanced distributed task scheduling framework based on XXL-JOB 2.5.0 with HTTPS support and other improvements.</description>
-	<url>https://www.xuxueli.com/</url>
+	<description>Enhanced distributed task scheduling platform based on XXL-JOB 2.5.0, adding DB-backed user/permission model, OpenAPI (HMAC-SHA256 + Webhook), HTTPS support and a Vue 2 + Element UI console.</description>
+	<url>https://github.com/liulxiang/xxl-job-pro</url>
 
 	<modules>
 		<module>xxl-job-core</module>
@@ -59,17 +59,17 @@
 	</licenses>
 
 	<scm>
-		<tag>master</tag>
-		<url>https://github.com/xuxueli/xxl-job.git</url>
-		<connection>scm:git:https://github.com/xuxueli/xxl-job.git</connection>
-		<developerConnection>scm:git:git@github.com:xuxueli/xxl-job.git</developerConnection>
+		<tag>v2.5.0</tag>
+		<url>https://github.com/liulxiang/xxl-job-pro</url>
+		<connection>scm:git:https://github.com/liulxiang/xxl-job-pro.git</connection>
+		<developerConnection>scm:git:git@github.com:liulxiang/xxl-job-pro.git</developerConnection>
 	</scm>
+	<!-- 上游 XXL-JOB（作者 xuxueli）版权信息见 NOTICE -->
 	<developers>
 		<developer>
-			<id>XXL</id>
-			<name>xuxueli</name>
-			<email>931591021@qq.com</email>
-			<url>https://github.com/xuxueli</url>
+			<id>liulxiang</id>
+			<name>liulxiang</name>
+			<url>https://github.com/liulxiang</url>
 		</developer>
 	</developers>
 

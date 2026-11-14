@@ -334,13 +334,12 @@ xxl.job.executor.keyAlias=executor
 
 | 文档 | 内容 |
 | --- | --- |
-| [doc/XXL-JOB官方文档.md](doc/XXL-JOB官方文档.md) | 上游完整文档：架构、调度机制、GLUE、分片、执行器配置等 |
-| [doc/XXL-JOB-English-Documentation.md](doc/XXL-JOB-English-Documentation.md) | 上游英文文档 |
 | [doc/openapi-integration.md](doc/openapi-integration.md) | OpenAPI 对接指南：凭证、签名、端点、字段、Webhook、Python 示例 |
 | [doc/https-support.md](doc/https-support.md) | HTTPS 配置与证书指南 |
 | [doc/changelog-https-support.md](doc/changelog-https-support.md) | HTTPS 特性变更记录 |
 | [doc/db/tables_xxl_job.sql](doc/db/tables_xxl_job.sql) | 建表脚本与初始化数据 |
-| `doc/images/`、`doc/XXL-JOB架构图.key` | 架构图与界面素材 |
+| [CHANGELOG.md](CHANGELOG.md) | 本项目变更记录 |
+| [上游 XXL-JOB 文档](https://github.com/xuxueli/xxl-job/tree/master/doc) | 上游完整文档（中文/英文）：架构、调度机制、GLUE、分片、执行器配置等 |
 
 ## 技术栈
 
@@ -376,4 +375,5 @@ OpenAPI 是纯 HTTP + JSON，只需按签名算法生成 4 个请求头；[doc/o
 
 本项目基于 [GNU General Public License v3.0](LICENSE) 开源，上游 XXL-JOB 版权归其作者 [xuxueli](https://github.com/xuxueli) 所有。
 
-- 本项目仓库：[https://gitee.com/chongkelai/xxl-job-pro](https://gitee.com/chongkelai/xxl-job-pro)
+- 本项目仓库：[GitHub](https://github.com/liulxiang/xxl-job-pro) / [Gitee](https://gitee.com/chongkelai/xxl-job-pro)
+- 参与贡献：[CONTRIBUTING.md](CONTRIBUTING.md)；安全问题请按 [SECURITY.md](SECURITY.md) 私下报告

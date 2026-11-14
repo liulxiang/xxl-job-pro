@@ -1,0 +1,66 @@
+name: Bug 报告
+description: 报告一个可复现的问题
+title: "[BUG] "
+labels: [ "bug" ]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        提交前请先搜索已有的 Issue，避免重复。
+        **安全漏洞请勿在此提交**，请按 [SECURITY.md](../blob/main/SECURITY.md) 私下报告。
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 问题描述
+      description: 发生了什么？期望的行为是什么？
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 导入 doc/db/tables_xxl_job.sql
+        2. 启动 xxl-job-admin
+        3. 在「任务管理」新建 CRON 任务...
+        4. 观察到...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 项目版本 / 提交
+      placeholder: 2.5.0 或 b3b9650
+    validations:
+      required: true
+  - type: dropdown
+    id: module
+    attributes:
+      label: 涉及模块
+      multiple: true
+      options:
+        - xxl-job-admin 调度中心
+        - xxl-job-core 执行器内核
+        - 后台前端（Vue2 + Element UI）
+        - 用户与权限
+        - OpenAPI / Webhook
+        - HTTPS
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: 环境信息
+      description: JDK、Spring Boot、MySQL、操作系统、浏览器版本
+      placeholder: JDK 8 / MySQL 8.0.36 / macOS 14 / Chrome 130
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志 / 截图
+      description: 相关堆栈、调度日志或界面截图（请先脱敏，勿贴 accessToken、AppSecret）
+      render: shell
+    validations:
+      required: false

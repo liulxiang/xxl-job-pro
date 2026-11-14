@@ -1,0 +1,40 @@
+name: 功能建议
+description: 提出新功能或增强建议
+title: "[FEAT] "
+labels: [ "enhancement" ]
+body:
+  - type: textarea
+    id: background
+    attributes:
+      label: 场景与动机
+      description: 你在什么场景下遇到什么问题？现在的做法为什么不够用？
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 期望的方案
+      description: 希望新增/改动什么？接口、页面、配置项的大致形态
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 考虑过的替代方案
+    validations:
+      required: false
+  - type: dropdown
+    id: breaking
+    attributes:
+      label: 是否涉及不兼容变更 / 数据库结构变更
+      options:
+        - 否
+        - 是（需要说明升级步骤）
+    validations:
+      required: true
+  - type: checkboxes
+    id: willing
+    attributes:
+      label: 是否愿意提交 PR
+      options:
+        - label: 我可以提 PR（请先在本 Issue 讨论方案）
