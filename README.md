@@ -22,6 +22,7 @@
 
 - [特性](#特性)
 - [模块结构](#模块结构)
+- [界面预览](#界面预览)
 - [架构概览](#架构概览)
 - [快速开始](#快速开始)
 - [配置说明](#配置说明)
@@ -71,15 +72,36 @@
 
 ```
 xxl-job-pro
-├── doc/                      文档、架构图、建表脚本
-│   ├── db/tables_xxl_job.sql 建表 + 初始化数据（10 张表）
+├── doc/                       文档、架构图、建表脚本
+│   ├── db/tables_xxl_job.sql  建表 + 初始化数据（10 张表）
 │   ├── openapi-integration.md
 │   ├── https-support.md
-│   └── XXL-JOB官方文档.md
+│   ├── changelog-https-support.md
+│   └── screenshots/           控制台界面截图
 ├── xxl-job-core/
 ├── xxl-job-admin/
-└── xxl-job-executor-sample-springboot/
+├── xxl-job-executor-sample-springboot/
+├── .github/                   CI、Issue/PR 模板、Dependabot
+├── CHANGELOG.md
+├── CONTRIBUTING.md
+└── SECURITY.md
 ```
+
+## 界面预览
+
+> 截图取自 `2.5.0` 版本实际运行的控制台（Vue 2 + Element UI）。
+
+| 运行报表 | 任务管理 |
+| --- | --- |
+| ![运行报表](doc/screenshots/dashboard.png) | ![任务管理](doc/screenshots/jobinfo.png) |
+
+| 调度日志 | 执行器管理 |
+| --- | --- |
+| ![调度日志](doc/screenshots/joblog.png) | ![执行器管理](doc/screenshots/jobgroup.png) |
+
+| 开放API凭证 | 使用教程（内置 OpenAPI 文档） |
+| --- | --- |
+| ![开放API凭证](doc/screenshots/apiclient.png) | ![使用教程](doc/screenshots/help.png) |
 
 ## 架构概览
 
