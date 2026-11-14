@@ -42,7 +42,7 @@
 		<mybatis-spring-boot-starter.version>2.3.2</mybatis-spring-boot-starter.version>
 		<mysql-connector-j.version>9.1.0</mysql-connector-j.version>
 		<!-- dynamic language -->
-		<groovy.version>4.0.24</groovy.version>
+		<groovy.version>6.0.0</groovy.version>
 	</properties>
 
 	<build>
