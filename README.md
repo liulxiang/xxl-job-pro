@@ -25,6 +25,7 @@
 - [界面预览](#界面预览)
 - [架构概览](#架构概览)
 - [快速开始](#快速开始)
+- [Docker 部署](#docker-部署)
 - [配置说明](#配置说明)
 - [开放 API](#开放-api)
 - [HTTPS 支持](#https-支持)
@@ -137,6 +138,8 @@ flowchart LR
 - Maven 3.6+
 - MySQL 8.0（驱动为 MySQL Connector/J 9.1.0；如仍使用 5.7，请自行回退到 8.x 驱动）
 
+> 只想先把控制台跑起来看效果？用 Docker 一条命令即可，见 [Docker 部署](#docker-部署)，无需准备 JDK 与 MySQL。
+
 ### 1. 初始化数据库
 
 ```bash
@@ -229,6 +232,51 @@ mvn clean install
     <version>2.5.0</version>
 </dependency>
 ```
+
+## Docker 部署
+
+仓库内置两套文件，适合在虚拟机、云主机或临时演示环境中一条命令跑起来：
+
+| 文件 | 作用 |
+| --- | --- |
+| `Dockerfile` | 多阶段构建：`maven:3.9-eclipse-temurin-8` 编译打包 → `eclipse-temurin:8-jre-jammy` 运行，带健康检查 |
+| `docker-compose.yml` | MySQL 8.0（首次启动自动导入建表脚本）+ xxl-job-admin，健康检查后按序启动 |
+| `.env.example` | 可选的密码 / accessToken / 界面语言配置模板 |
+| `.dockerignore` | 排除 `target/`、日志、截图等，缩短构建上下文 |
+
+```bash
+cp .env.example .env          # 可选，按需改密码与 accessToken
+docker compose up -d --build
+docker compose logs -f admin  # 出现 Started XxlJobAdminApplication 即就绪
+```
+
+| 项 | 地址 |
+| --- | --- |
+| 控制台 | http://127.0.0.1:8080/xxl-job-admin （`admin / 123456`） |
+| OpenAPI 前缀 | http://127.0.0.1:8080/xxl-job-admin/openapi/v1 |
+| MySQL | 容器内 `mysql:3306`，默认不向宿主机暴露端口（避免与本机已装 MySQL 冲突） |
+
+常用操作：
+
+```bash
+docker compose ps                     # 查看服务状态与健康检查结果
+docker compose logs -f mysql          # 观察建表脚本执行情况
+docker compose up -d --build admin    # 改代码后只重建调度中心
+docker compose down                   # 停止并保留数据卷
+docker compose down -v                # 连数据卷一起清空，下次启动重新建表
+docker compose build --no-cache admin # 依赖异常时强制重建
+```
+
+容器内配置全部通过环境变量覆盖，无需改动 `application.yml`：
+
+| 环境变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `MYSQL_ROOT_PASSWORD` | `xxl_job_123456` | MySQL root 密码，同时作为数据源密码（生产务必修改） |
+| `XXL_JOB_ACCESS_TOKEN` | `default_token` | 注入到 `xxl.job.accessToken`，须与执行器一致 |
+| `XXL_JOB_I18N` | `zh_CN` | 注入到 `xxl.job.i18n`，可选 `zh_CN / zh_TC / en` |
+| `JAVA_OPTS` | `-Xms256m -Xmx512m` | 容器内 JVM 参数 |
+
+> 注意：容器内的执行器地址需从宿主机视角填写（例如执行器跑在宿主机时填 `http://host.docker.internal:9999/`，Linux 上可用宿主 IP 或 `--add-host` 方式解决）。
 
 ## 配置说明
 

@@ -21,6 +21,11 @@
 - `application.properties` 迁移为 `application.yml`，键名与原拼写保持 1:1
 - 调度中心默认端口调整为 `8081`
 
+### 构建与部署
+
+- 新增 `Dockerfile`、`docker-compose.yml`、`.dockerignore`、`.env.example`，`docker compose up -d --build` 即可拉起 MySQL 8.0 + 调度中心
+- 修复 `xxl-job-executor-sample-springboot` 的 `<parent>` 指向不存在的 `xxl-job-executor-samples` 导致干净环境全模块构建失败的问题
+
 ### 数据库
 
 - 新增表：`xxl_job_api_client`（开放API凭证）、`xxl_job_openapi_callback`（回调与重试状态）

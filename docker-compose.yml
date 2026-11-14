@@ -1,0 +1,58 @@
+name: xxl-job-pro
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: xxl-job-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-xxl_job_123456}
+      MYSQL_DATABASE: xxl_job
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+08:00
+    volumes:
+      # 首次启动自动执行建表脚本（脚本自带 CREATE DATABASE / USE）
+      - ./doc/db/tables_xxl_job.sql:/docker-entrypoint-initdb.d/01-xxl-job.sql:ro
+      - xxl_job_mysql_data:/var/lib/mysql
+    # 默认不向宿主机暴露 MySQL 端口，避免与本机已装的 3306 冲突；
+    # 需要用客户端直连时取消下行注释：
+    # ports:
+    #   - "127.0.0.1:3306:3306"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  admin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: xxl-job-pro/xxl-job-admin:2.5.0
+    container_name: xxl-job-admin
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      TZ: Asia/Shanghai
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/xxl_job?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&serverTimezone=Asia/Shanghai"
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-xxl_job_123456}
+      # 调度中心与执行器必须一致，生产环境务必修改
+      XXL_JOB_ACCESSTOKEN: ${XXL_JOB_ACCESS_TOKEN:-default_token}
+      XXL_JOB_I18N: ${XXL_JOB_I18N:-zh_CN}
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    ports:
+      - "8080:8080"
+
+volumes:
+  xxl_job_mysql_data:

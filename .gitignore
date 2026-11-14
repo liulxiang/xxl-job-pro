@@ -77,3 +77,6 @@ target/
 *.log
 xxl-job-admin/data/applogs/
 **/data/applogs/
+
+# docker
+.env
