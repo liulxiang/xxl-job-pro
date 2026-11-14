@@ -6,23 +6,16 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
-# Log file
+# Logs & runtime data
 *.log
-
-# Log directories
 logs/
 **/logs/
 log/
 **/log/
 **/applogs/
+**/data/
 
-# BlueJ files
-*.ctxt
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
+# Package files
 *.jar
 *.war
 *.nar
@@ -31,10 +24,16 @@ log/
 *.tar.gz
 *.rar
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+# JVM crash logs
 hs_err_pid*
 
-### STS ###
+# BlueJ
+*.ctxt
+
+# J2ME
+.mtj.tmp/
+
+# Eclipse / STS
 .apt_generated
 .classpath
 .factorypath
@@ -43,13 +42,13 @@ hs_err_pid*
 .springBeans
 .sts4-cache
 
-### IntelliJ IDEA ###
+# IntelliJ IDEA
 .idea
 *.iws
 *.iml
 *.ipr
 
-### NetBeans ###
+# NetBeans
 /nbproject/private/
 /nbbuild/
 /dist/
@@ -58,25 +57,13 @@ hs_err_pid*
 build/
 !**/src/main/**/build/
 !**/src/test/**/build/
-.idea
-.classpath
-.project
-*.iml
-target/
-.DS_Store
-### VS Code ###
+
+# VS Code / Cursor
 .vscode/
-
-
-### Cursor ###
 .cursor/
 
+# OS
+.DS_Store
 
-**/applogs/
-**/data/
-*.log
-xxl-job-admin/data/applogs/
-**/data/applogs/
-
-# docker
+# Docker
 .env
